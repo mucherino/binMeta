@@ -1,0 +1,32 @@
+
+binMeta project
+
+This is the very preliminary version of a Java project having as main aim of collecting in one 
+unique Java package the several meta-heuristic searches that have been proposed over the last 
+years for the solution of combinatorial optimization problems.
+
+This initial version contains only a RandomWalk, and uses only 3 unconstrained optimization 
+problems for the tests. These are provided, together with the abstract classes named "binMeta"
+and "Objective", mainly to give a guidance for the development of other classes, implementing
+other meta-heuristic searches, as well as for the evaluation of other optimization problems.
+
+The next version of the project is supposed to collect the best implementations given by
+the students of the course on "Multi-threading Operating Systems" (Master in Computer Science, 
+ISTIC, University of Rennes1), to which a different meta-heuristic search was assigned in
+the first semester of the academic year 2020-21.
+
+This is one of the reasons why the current Java classes are not intensely commented, as it is 
+part of the students' tasks to check and understand the provided code, which will be at the basis 
+of their implementations.
+
+By the way, why "binMeta"? The "bin" part can be interpreted as "binary", which is important
+to point out in this project because all the implemented meta-heuristic searches are supposed 
+to directly work with a binary representations of the data. Moreover, if you know some German, 
+the "bin" may remind you of "(ich) bin" (I am), followed by "Meta", which recalls the name 
+"meta-heuristic", but it can be interpreted as something beyond the simple implementation of 
+one meta-heuristic search.
+
+November 2nd, 2020
+
+Antonio Mucherino
+
