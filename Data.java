@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Nov 1, 2020
+ * last update: Nov 14, 2020
  *
  * AM
  */
@@ -320,7 +320,7 @@ public class Data
       return this.data.size();
    }
 
-   // Gives a specified bit 
+   // Gives the specified bit 
    // (private method, it doesnt verify if the bit and byte indices are correct)
    private int getBit(int i,int j)
    {
@@ -328,7 +328,7 @@ public class Data
       return (b >> (7 - j)) & 1;
    }
 
-   // Gives a specified bit
+   // Gives the specified bit
    // (private method, it doesnt verify if the bit index is correct)
    private int getBit(int k)
    {
@@ -341,6 +341,22 @@ public class Data
    public int getCurrentBit()
    {
       return this.getBit(this.current);
+   }
+
+   // Flips the specified bit
+   // (private method, it doesnt verify if the bit and byte indices are correct)
+   private void flipBit(int i,int j)
+   {
+      byte x = (byte) (1 << (7 - j));
+      byte b = (byte) this.data.get(i);
+      this.data.set(i,(byte)(b^x));
+   }
+
+   // Flips the specified bit
+   // (private method, it doesnt verify if the bit index is correct)
+   private void flipBit(int k)
+   {
+      this.flipBit(k/8,k%8);
    }
 
    // Is there any next bit?
@@ -389,6 +405,81 @@ public class Data
    {
       this.moveToPrevBit();
       return this.getCurrentBit();
+   }
+
+   // Computes the Hamming distance between this Data object, and the Data object D
+   // (the pointers of the two Data objects are not modified)
+   public int hammingDistanceTo(Data D)
+   {
+      try
+      {
+         if (D == null) throw new Exception("Impossible to compute Hamming distance: Data object D is null");
+         if (this.numberOfBits() != D.numberOfBits()) throw new Exception("Impossible to compute Hamming distance: number of bits differ");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      int h = 0;
+      int l = this.numberOfBits();
+      for (int i = 0; i < l; i++)  if (this.getBit(i) != D.getBit(i))  h++;
+      return h;
+   }
+
+   // Verifies whether this Data object belongs to the neighbour of Data object D
+   // (h is the hamming distance defining the neighbourhood)
+   public boolean belongsToNeighbourOf(Data D,int h)
+   {
+      try
+      {
+         if (h < 0) throw new Exception("Impossible to verify neighbourhood of Data object: specified hamming distance is negative");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      return this.hammingDistanceTo(D) <= h;
+   }
+
+   // Selects a random Data object in the neighbourhood with hamming distance [l,u] of this Data object
+   public Data randomSelectInNeighbour(int l,int u)
+   {
+      try
+      {
+         if (l <= 0) throw new Exception("Impossible to verify neighbourhood of Data object: lower bound on hamming distance is nonpositive");
+         if (u < 0)  throw new Exception("Impossible to verify neighbourhood of Data object: upper bound on hamming distance is negative");
+         if (l > u)  throw new Exception("Impossible to verify neighbourhood of Data object: upper bound is greater than lower bound on hamming distance");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      Random R = new Random();
+      Data random = new Data(this);
+      int len = random.numberOfBits();
+      boolean[] toFlip = new boolean[len];
+      for (int i = 0; i < len; i++)  toFlip[i] = false;
+      int actual = l + R.nextInt(u - l + 1);
+      for (int j = 0; j < actual; j++)
+      {
+         int bitindex = 0;
+         do bitindex = R.nextInt(len);  while (toFlip[bitindex]);
+         random.flipBit(bitindex);
+         toFlip[bitindex] = true;
+      }
+      return random;
+   }
+
+   // Selects a random Data object in the neighbourhood with hamming distance h of this Data object
+   public Data randomSelectInNeighbour(int h)
+   {
+      return this.randomSelectInNeighbour(1,h);
    }
 
    // Converts the Data object in Boolean
@@ -526,6 +617,28 @@ public class Data
       return '\0';
    }
 
+   @Override
+   public boolean equals(Object o)
+   {
+      boolean isData = (o instanceof Data);
+      if (!isData)  return false;
+
+      Data D = (Data) o;
+      int l = this.numberOfBits();
+      if (l != D.numberOfBits())  return false;
+
+      l = this.data.size();  // comparison byte per byte
+      for (int i = 0; i < l; i++)  if (!this.data.get(i).equals(D.data.get(i)))  return false;
+
+      return true;
+   }
+
+   @Override
+   public int hashCode()
+   {
+      return this.data.hashCode();
+   }
+
    // toString (does not change the bit pointer)
    public String toString()
    {
@@ -551,6 +664,7 @@ public class Data
    public static void main(String[] main)
    {
       System.out.println("Data class\n");
+      Random R = new Random();
 
       System.out.println("Testing constructors");
       Data D01 = new Data(10,false);
@@ -590,6 +704,15 @@ public class Data
       System.out.println("D15 = " + D15);
       System.out.println();
 
+      System.out.println("Testing flipBit methods (starting point is D12)");
+      for (int k = 0; k < D12.numberOfBits(); k++)
+      {
+         D12.flipBit(k);
+         System.out.println(D12);
+      }
+      System.out.println();
+
+      System.out.println("Testing equals ... " + (D01.equals(new Data(D01)) && !D01.equals(D02)));
       System.out.print("Testing iterators ... ");
       while (D14.hasNextBit() && D15.hasNextBit())
       {
@@ -604,6 +727,17 @@ public class Data
          D15.moveToPrevBit();
       }
       System.out.println("done\n");
+
+      System.out.println("Testing Hamming distance methods");
+      System.out.println("Distance between D01 and D02 is " + D01.hammingDistanceTo(D02));
+      System.out.println("Distance between D14 and D15 is " + D15.hammingDistanceTo(D14));
+      System.out.println("Distance between D11 and D12 is " + D11.hammingDistanceTo(D12));
+      System.out.println("Distance between D09 and D10 is " + D10.hammingDistanceTo(D09));
+      System.out.println("D09 belongsToNeighbourOf D10 (h = 1) : " + D09.belongsToNeighbourOf(D10,1));
+      System.out.println("D14 belongsToNeighbourOf D15 (h = 9) : " + D15.belongsToNeighbourOf(D14,9));
+      int h = 1 + R.nextInt(6);
+      System.out.println("randomSelectInNeighbour(" + h + "," + h + ") ==> " + D02.randomSelectInNeighbour(h,h)); 
+      System.out.println();
 
       System.out.println("Testing methods *Value()");
       System.out.println("booleanValue of D01 = " + D01.booleanValue());
