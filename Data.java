@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Nov 14, 2020
+ * last update: Nov 19, 2020
  *
  * AM
  */
@@ -337,12 +337,6 @@ public class Data
       return this.getBit(i,j);
    }
 
-   // Gives the current bit
-   public int getCurrentBit()
-   {
-      return this.getBit(this.current);
-   }
-
    // Flips the specified bit
    // (private method, it doesnt verify if the bit and byte indices are correct)
    private void flipBit(int i,int j)
@@ -357,6 +351,12 @@ public class Data
    private void flipBit(int k)
    {
       this.flipBit(k/8,k%8);
+   }
+
+   // Gives the current bit
+   public int getCurrentBit()
+   {
+      return this.getBit(this.current);
    }
 
    // Is there any next bit?
@@ -556,7 +556,7 @@ public class Data
    // Converts the Data object in positive long (values > 0)
    public long posLongValue()
    {
-      return 1 + this.longValue();
+      return 1L + this.longValue();
    }
 
    // Converts the Data object in positive float of form 0.m

@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Nov 14, 2020
+ * last update: Nov 19, 2020
  *
  * AM
  */
@@ -23,7 +23,7 @@ public class RandomWalk extends binMeta
          if (maxTime <= 0) throw new Exception(msg + "the maximum execution time is 0 or even negative");
          this.maxTime = maxTime;
          if (startPoint == null) throw new Exception(msg + "the reference to the starting point is null");
-         this.solution = startPoint;
+         this.solution = new Data(startPoint);
          if (obj == null) throw new Exception(msg + "the reference to the objective is null");
          this.obj = obj;
          this.objValue = this.obj.value(this.solution);
@@ -69,13 +69,13 @@ public class RandomWalk extends binMeta
    // main
    public static void main(String[] args)
    {
-      int ITMAX = 10000;  // number of iterations
+      int TIMEMAX = 10000;  // max time
 
       // BitCounter
       int n = 50;
       Objective obj = new BitCounter(n);
       Data D = obj.solutionSample();
-      RandomWalk rw = new RandomWalk(D,obj,ITMAX);
+      RandomWalk rw = new RandomWalk(D,obj,TIMEMAX);
       System.out.println(rw);
       System.out.println("starting point : " + rw.getSolution());
       System.out.println("optimizing ...");
@@ -89,7 +89,7 @@ public class RandomWalk extends binMeta
       int ndigits = 10;
       obj = new Fermat(exp,ndigits);
       D = obj.solutionSample();
-      rw = new RandomWalk(D,obj,ITMAX);
+      rw = new RandomWalk(D,obj,TIMEMAX);
       System.out.println(rw);
       System.out.println("starting point : " + rw.getSolution());
       System.out.println("optimizing ...");
@@ -111,7 +111,7 @@ public class RandomWalk extends binMeta
       n = 4;  int m = 14;
       ColorPartition cp = new ColorPartition(n,m);
       D = cp.solutionSample();
-      rw = new RandomWalk(D,cp,ITMAX);
+      rw = new RandomWalk(D,cp,TIMEMAX);
       System.out.println(rw);
       System.out.println("starting point : " + rw.getSolution());
       System.out.println("optimizing ...");
