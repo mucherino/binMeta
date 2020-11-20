@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Data
+public class Data implements Comparable<Data>
 {
    private int size;  // actual size (may not be a multiple of 8)
    private ArrayList<Byte> data;  // the data are stored as lists of bytes
@@ -658,6 +658,23 @@ public class Data
          }
       }
       return print + "] (" + this.numberOfBits() + ";" + this.numberOfBytes() + ")";
+   }
+
+   @Override
+   public int compareTo(Data o) {
+      if(equals(o))
+         return 0;
+
+      int index = 0;
+      while(o.data.size() > index && data.size() > index && o.data.get(index).equals(data.get(index)))
+         index++;
+
+      if(o.data.size() <= index)
+         return 1;
+      else if(data.size() <= index)
+         return -1;
+      else
+         return Byte.compareUnsigned(data.get(index), o.data.get(index)) < 0 ? -1 : 1;
    }
 
    // main (performing some basic tests)
