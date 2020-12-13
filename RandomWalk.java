@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Nov 19, 2020
+ * last update: Dec 3, 2020
  *
  * AM
  */
@@ -63,6 +63,9 @@ public class RandomWalk extends binMeta
 
          // the walk continues from the new generated solution
          D = newD;
+
+         // monitor
+         this.monitor();
       }
    }
 
@@ -80,6 +83,7 @@ public class RandomWalk extends binMeta
       System.out.println("starting point : " + rw.getSolution());
       System.out.println("optimizing ...");
       rw.optimize();
+      System.out.println();
       System.out.println(rw);
       System.out.println("solution : " + rw.getSolution());
       System.out.println();
@@ -94,6 +98,7 @@ public class RandomWalk extends binMeta
       System.out.println("starting point : " + rw.getSolution());
       System.out.println("optimizing ...");
       rw.optimize();
+      System.out.println();
       System.out.println(rw);
       System.out.println("solution : " + rw.getSolution());
       Data x = new Data(rw.solution,0,ndigits-1);
@@ -116,6 +121,7 @@ public class RandomWalk extends binMeta
       System.out.println("starting point : " + rw.getSolution());
       System.out.println("optimizing ...");
       rw.optimize();
+      System.out.println();
       System.out.println(rw);
       System.out.println("solution : " + rw.getSolution());
       cp.value(rw.solution);
