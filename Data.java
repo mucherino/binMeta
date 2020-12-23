@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Dec 13, 2020
+ * last update: Dec 23, 2020
  *
  * AM
  */
@@ -92,36 +92,42 @@ public class Data implements Comparable<Data>
          int N = 1 + (this.size - 1)/8;
          this.data = new ArrayList<Byte> (N);
 
-         // copying first Data object
-         int k = 0;
-         for (; k < D1.numberOfBytes() - 1; k++)
+         // if the D1 has a number of bits multiple of 8, it's simple
+         if (D1.numberOfBits()%8 == 0)
          {
-            this.data.add(D1.data.get(k));
+            for (int k = 0; k < D1.numberOfBytes(); k++)  this.data.add(D1.data.get(k));
+            for (int k = 0; k < D2.numberOfBytes(); k++)  this.data.add(D2.data.get(k));
          }
-
-         // concatenating
-         int outphase2 = D1.numberOfBits()%8;
-         int outphase1 = 8 - outphase2;
-         int mask = 0;
-         for (int i = 0; i < outphase1; i++)  mask = mask | (1 << i);
-         int bi = D1.data.get(k) | ((D2.data.get(0) >> outphase2) & mask);
-         byte b = (byte) bi;
-         this.data.add(b);
-
-         // continuing with the second Data object
-         bi = D2.data.get(0) << outphase1;
-         k = 1;
-         for (; k < D2.numberOfBytes(); k++)
+         else
          {
-            bi = bi | ((D2.data.get(k) >> outphase2) & mask);
-            b = (byte) bi;
+            // copying first Data object
+            int k = 0;
+            for (; k < D1.numberOfBytes() - 1; k++)  this.data.add(D1.data.get(k));
+
+            // concatenating
+            int outphase2 = D1.numberOfBits()%8;
+            int outphase1 = 8 - outphase2;
+            int mask = 0;
+            for (int i = 0; i < outphase1; i++)  mask = mask | (1 << i);
+            int bi = D1.data.get(k) | ((D2.data.get(0) >> outphase2) & mask);
+            byte b = (byte) bi;
             this.data.add(b);
-            bi = D2.data.get(k) << outphase1;
-         }
-         if (k < N - 1)
-         {
-            b = (byte) bi;
-            this.data.add(b);
+
+            // continuing with the second Data object
+            bi = D2.data.get(0) << outphase1;
+            k = 1;
+            for (; k < D2.numberOfBytes(); k++)
+            {
+               bi = bi | ((D2.data.get(k) >> outphase2) & mask);
+               b = (byte) bi;
+               this.data.add(b);
+               bi = D2.data.get(k) << outphase1;
+            }
+            if (this.data.size() < N)
+            {
+               b = (byte) bi;
+               this.data.add(b);
+            }
          }
          this.current = 0;
       }
@@ -659,14 +665,13 @@ public class Data implements Comparable<Data>
       int n = D.numberOfZeros();
       if (bitValue)  n = D.numberOfBits() - n;
 
-      // removing (flipping) a percantage of bits corresponding to bitValue
+      // removing (flipping) a percentage of bits corresponding to bitValue
       Random R = new Random();
       Data newD = new Data(D);
       int np = (int) ((1.0 - p)*n);
-
       while (np > 0)
       {
-         int k = R.nextInt(n);
+         int k = R.nextInt(D.numberOfBits());
          if (newD.getBit(k) == bit)
          {
             newD.flipBit(k);
