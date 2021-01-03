@@ -11,7 +11,7 @@ objectives: Objective.class BitCounter.class ColorPartition.class Fermat.class
 	echo "objectives compiled on" > objectives
 	date >> objectives
 
-methods: binMeta.class RandomWalk.class WolfSearch.class
+methods: binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class
 	echo "meta-heuristic methods compiled on" > methods
 	date >> methods
 
@@ -30,6 +30,9 @@ Data.class: Data.java
 Fermat.class: Fermat.java Data.class Objective.class
 	javac -cp . Fermat.java
 
+LocalOpt.class: LocalOpt.java binMeta.class objectives
+	javac -cp . LocalOpt.java
+
 Memory.class: Memory.java Data.class
 	javac -cp . Memory.java
 
@@ -39,7 +42,7 @@ Objective.class: Objective.java
 RandomWalk.class: RandomWalk.java binMeta.class objectives
 	javac -cp . RandomWalk.java
 
-WolfSearch.class: WolfSearch.java binMeta.class objectives
+WolfSearch.class: WolfSearch.java binMeta.class LocalOpt.class objectives
 	javac -cp . WolfSearch.java
 
 clean:

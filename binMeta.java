@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Dec 3, 2020
+ * last update: Jan 3, 2021
  *
  * AM
  */
@@ -56,7 +56,7 @@ public abstract class binMeta
       {
          System.out.print("\r");
          long time = System.currentTimeMillis() - this.startTime;
-         System.out.print(this.metaName + " === Best solution " + this.objValue + "; time " + time/1000.0 + "ms");
+         System.out.print(this.metaName + " === Best solution " + this.objValue + "; time " + time/1000.0 + " ms");
       }
    }
 

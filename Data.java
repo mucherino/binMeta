@@ -3,11 +3,13 @@
  *
  * binMeta project
  *
- * last update: Dec 23, 2020
+ * last update: Jan 3, 2021
  *
  * AM
  */
 
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
@@ -16,7 +18,7 @@ public class Data implements Comparable<Data>
 {
    protected int size;  // actual size (may not be a multiple of 8)
    protected ArrayList<Byte> data;  // the data are stored as lists of bytes
-   protected int current;  // the current bit address
+   protected int current;  // the current bit pointer
 
    // Data constructor: it generates a new Data object with its n bits set to 0 or 1,
    //                   depending on value of the boolean argument (0=false, 1=true)
@@ -62,6 +64,41 @@ public class Data implements Comparable<Data>
             for (int j = 0; j < 8; j++)
             {
                if (k < n && R.nextDouble() < p)  bi = bi + 1;
+               if (j != 7)  bi = bi << 1;
+               k++;
+            }
+            byte b = (byte) bi;
+            this.data.add(b);
+         }
+         this.size = n;
+         this.current = 0;
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+   }
+
+   // Data constructor: it generates a new Data object by setting at 1 all bits indicated in input Set object
+   //                   all other bits are set to 0 (bit indices out of bounds will be ignored)
+   //                   the bit pointer is set to 0
+   public Data(int n,Set<Integer> ones)
+   {
+      try
+      {
+         if (n <= 0) throw new Exception("Specified size for Data object is zero or even negative");
+         if (ones == null) throw new Exception("Specified Set object is null");
+         int N = 1 + (n - 1)/8;
+
+         int k = 0;
+         this.data = new ArrayList<Byte> (N);
+         for (int i = 0; i < N; i++)
+         {
+            int bi = 0;
+            for (int j = 0; j < 8; j++)
+            {
+               if (k < n && ones.contains(8*i + j))  bi = bi + 1;
                if (j != 7)  bi = bi << 1;
                k++;
             }
@@ -445,6 +482,12 @@ public class Data implements Comparable<Data>
       return this.size;
    }
 
+   // Gives the current value of the bit pointer
+   public int getCurrentBitPointer()
+   {
+      return this.current;
+   }
+
    // Gives the specified bit 
    // (private method, it doesnt verify if the bit and byte indices are correct)
    private int getBit(int i,int j)
@@ -512,6 +555,14 @@ public class Data implements Comparable<Data>
       return this.getBit(this.current);
    }
 
+   // Gives a new Data object equal to this but with current bit flipped
+   public Data withCurrentBitFlipped()
+   {
+      Data D = new Data(this);
+      D.flipBit(this.current);
+      return D;
+   }
+
    // Is there any next bit?
    public boolean hasNextBit()
    {
@@ -536,6 +587,15 @@ public class Data implements Comparable<Data>
       return this.getCurrentBit();
    }
 
+   // Gives a new Data object equal to this but with next bit flipped
+   public Data withNextBitFlipped()
+   {
+      Data D = new Data(this);
+      this.moveToNextBit();
+      D.flipBit(this.current);
+      return D;
+   }
+
    // Is there any previous bit?
    public boolean hasPrevBit()
    {
@@ -558,6 +618,15 @@ public class Data implements Comparable<Data>
    {
       this.moveToPrevBit();
       return this.getCurrentBit();
+   }
+
+   // Gives a new Data object equal to this but with next bit flipped
+   public Data withPrevBitFlipped()
+   {
+      Data D = new Data(this);
+      this.moveToPrevBit();
+      D.flipBit(this.current);
+      return D;
    }
 
    // Computes the Hamming distance between this Data object, and the Data object D
@@ -954,6 +1023,12 @@ public class Data implements Comparable<Data>
       System.out.println("D20 = " + D20);
       Data D21 = new Data("000101010101010110");
       System.out.println("D21 = " + D21);
+      Set<Integer> set = new TreeSet<Integer> ();
+      set.add(1);  set.add(3);  set.add(9);  set.add(12);
+      Data D22 = new Data(15,set);
+      System.out.println("D22 = " + D22);
+      System.out.println();
+
       System.out.print("Method equals : D09 and D10 are ");
       if (D09.equals(D10))
          System.out.println("equal");
@@ -1009,12 +1084,10 @@ public class Data implements Comparable<Data>
       }
       System.out.println("done");
 
-      System.out.println("Testing flipBit methods (starting point is D12)");
-      for (int k = 0; k < D12.numberOfBits(); k++)
-      {
-         D12.flipBit(k);
-         System.out.println(D12);
-      }
+      System.out.println("Testing flipBit methods (starting point is D02 = " + D02 + ")");
+      D02.reset();
+      System.out.println(D02.withCurrentBitFlipped());
+      while (D02.hasNextBit())  System.out.println(D02.withNextBitFlipped());
       System.out.println();
 
       System.out.println("Testing Hamming distance methods");

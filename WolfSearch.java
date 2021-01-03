@@ -5,7 +5,7 @@
  *
  * initial version coded by Remi Viotty, M1 Info 2019-20
  *
- * last update: Dec 13, 2020
+ * last update: Jan 3, 2021
  *
  * AM
  */
@@ -88,7 +88,9 @@ public class WolfSearch extends binMeta
              Memory wolfMemory = (Memory) this.wolves.getParameter(i,2);
 
              // trying to prey for new food initiatively
-             Data D = wolf.randomSelectInNeighbour(vision);
+             LocalOpt lopt = new LocalOpt(wolf.randomSelectInNeighbour(vision),this.obj,20);
+             lopt.optimize();
+             Data D = lopt.getSolution();
              double value = this.obj.value(D);
              if (!wolfMemory.contains(D) && value < wolfValue)
              {
@@ -132,7 +134,6 @@ public class WolfSearch extends binMeta
                 // any threats?
                 if (R.nextDouble() < pbThreat)
                 {
-                   wolfMemory.add(wolf);
                    D = wolf.randomSelectInNeighbour(vision);
                    value = this.obj.value(D);
                    this.wolves.set(i,D,value);
@@ -159,10 +160,9 @@ public class WolfSearch extends binMeta
    // main
    public static void main(String[] args)
    {
-      int TIMEMAX = 2000;  // max time
-
       // BitCounter
-      int n = 50;
+      int n = 100;
+      int TIMEMAX = 2000;  // max time
       Objective obj = new BitCounter(n);
       WolfSearch ws = new WolfSearch(obj,100,10,2,44,0.1,0.3,TIMEMAX,TIMEMAX);
       System.out.println(ws);
@@ -175,9 +175,10 @@ public class WolfSearch extends binMeta
 
       // Fermat
       int exp = 2;
-      int ndigits = 10;
+      int ndigits = 20;
+      TIMEMAX = 10000;
       obj = new Fermat(exp,ndigits);
-      ws = new WolfSearch(obj,100,10,2,28,0.1,0.3,TIMEMAX,TIMEMAX);
+      ws = new WolfSearch(obj,100,12,2,3*ndigits-2,0.1,0.4,TIMEMAX,TIMEMAX);
       System.out.println(ws);
       System.out.println("optimizing ...");
       ws.optimize();
@@ -196,9 +197,10 @@ public class WolfSearch extends binMeta
       System.out.println();
 
       // ColorPartition
-      n = 4;  int m = 14;
+      n = 10;  int m = 20;
+      TIMEMAX = 30000;
       ColorPartition cp = new ColorPartition(n,m);
-      ws = new WolfSearch(cp,100,10,2,n*m-2,0.1,0.3,TIMEMAX,TIMEMAX);
+      ws = new WolfSearch(cp,150,20,2,n*m-2,0.1,0.3,TIMEMAX,TIMEMAX);
       System.out.println(ws);
       System.out.println("optimizing ...");
       ws.optimize();
