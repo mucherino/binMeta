@@ -5,7 +5,7 @@
  *
  * initial version coded by Remi Viotty, M1 Info 2019-20
  *
- * last update: Jan 3, 2021
+ * last update: April 21, 2021
  *
  * AM
  */
@@ -25,25 +25,24 @@ public class WolfSearch extends binMeta
    {
       try
       {
-         String msg = "Impossible to create WolfSearch object: ";
-         if (obj == null) throw new Exception(msg + "the reference to the objective is null");
+         if (obj == null) throw new Exception("WolfSearch: the reference to the objective is null");
          this.obj = obj;
          Data ref = this.obj.solutionSample();
          int n = ref.numberOfBits();
-         if (memorySize <= 0) throw new Exception(msg + "the specified size of the wolf memory is 0 or even negative");
+         if (memorySize <= 0) throw new Exception("WolfSearch: the specified size of the wolf memory is nonpositive");
          this.memorySize = memorySize;
-         if (maxVision < 0 || maxVision > n) throw new Exception(msg + "meaningless maximum vision parameter");
-         if (minVision > maxVision) throw new Exception(msg + "minimum vision parameter seems to be larger than specified maximum vision");
-         if (minThreat < 0.0 || minThreat > 1.0) throw new Exception(msg + "the specified minimun threat is not a probability (must be in [0,1])");
-         if (maxThreat < 0.0 || maxThreat > 1.0) throw new Exception(msg + "the specified maximun threat is not a probability (must be in [0,1])");
-         if (minThreat > maxThreat) throw new Exception(msg + "minimum threat seems to be larger than maximum probability threat");
-         if (np <= 0) throw new Exception(msg + "the specified population size is 0 or even negative");
+         if (maxVision < 0 || maxVision > n) throw new Exception("WolfSearch: meaningless maximum vision parameter");
+         if (minVision > maxVision) throw new Exception("WolfSearch: minimum vision parameter seems to be larger than specified maximum vision");
+         if (minThreat < 0.0 || minThreat > 1.0) throw new Exception("WolfSearch: the specified minimun threat is not a probability (must be in [0,1])");
+         if (maxThreat < 0.0 || maxThreat > 1.0) throw new Exception("WolfSearch: the specified maximun threat is not a probability (must be in [0,1])");
+         if (minThreat > maxThreat) throw new Exception("WolfSearch: minimum threat seems to be larger than maximum probability threat");
+         if (np <= 0) throw new Exception("WolfSearch: the specified population size is nonpositive");
          this.np = np;
          Random R = new Random();
-         this.wolves = new Memory(this.np,3);  // 3 Memory parameters: vision, pbThrets, ephemeral memory
-         for (int i = 0; i < this.np; i++)
+         this.wolves = new Memory(this.np,"fifo",3);  // 3 Memory parameters: vision, pbThrets, ephemeral memory
+         while (!this.wolves.isFull())
          {
-            Data D = new Data(n,0.5);
+            Data D = new Data(n,0.2 + 0.6*R.nextDouble());
             int k = this.wolves.add(D,this.obj.value(D));
             int vision = minVision + R.nextInt(maxVision - minVision);
             double pbThreat = minThreat + R.nextDouble()*(maxThreat - minThreat);
@@ -52,9 +51,9 @@ public class WolfSearch extends binMeta
             this.wolves.setParameter(k,1,pbThreat);
             this.wolves.setParameter(k,2,ephemeral);
          }
-         if (maxIt <= 0) throw new Exception(msg + "the specified maximum number of iterations is 0 or even negative");
+         if (maxIt <= 0) throw new Exception("WolfSearch: the specified maximum number of iterations is nonpositive");
          this.maxIt = maxIt;
-         if (maxTime <= 0) throw new Exception(msg + "the maximum execution time is 0 or even negative");
+         if (maxTime <= 0) throw new Exception("WolfSearch: the maximum execution time is nonpositive");
          this.maxTime = maxTime;
          this.solution = null;
          this.objValue = null;
@@ -67,8 +66,9 @@ public class WolfSearch extends binMeta
       }
    }
 
+   // optimize (by WolfSearch)
    @Override
-   public void optimize()  // by WolfSearch
+   public void optimize()
    {
       Random R = new Random();
       int it = 0;
@@ -88,9 +88,13 @@ public class WolfSearch extends binMeta
              Memory wolfMemory = (Memory) this.wolves.getParameter(i,2);
 
              // trying to prey for new food initiatively
-             LocalOpt lopt = new LocalOpt(wolf.randomSelectInNeighbour(vision),this.obj,20);
-             lopt.optimize();
-             Data D = lopt.getSolution();
+             Data D = wolf.randomSelectInNeighbourhood(vision);
+             if (R.nextInt(2) == 0)
+             {
+                LocalOpt lopt = new LocalOpt(D,this.obj,2+R.nextInt(98));
+                lopt.optimize();
+                D = lopt.getSolution();
+             }
              double value = this.obj.value(D);
              if (!wolfMemory.contains(D) && value < wolfValue)
              {
@@ -126,7 +130,7 @@ public class WolfSearch extends binMeta
                    // wolf i joins the selected wolf
                    Data other = this.wolves.getData(toapproach);
                    wolfMemory.add(wolf);
-                   D = other.randomSelectInNeighbour(1);
+                   D = other.randomSelectInNeighbourhood(1);
                    value = this.obj.value(D);
                    this.wolves.set(i,D,value);
                 }
@@ -134,7 +138,7 @@ public class WolfSearch extends binMeta
                 // any threats?
                 if (R.nextDouble() < pbThreat)
                 {
-                   D = wolf.randomSelectInNeighbour(vision);
+                   D = wolf.randomSelectInNeighbourhood(vision,vision);
                    value = this.obj.value(D);
                    this.wolves.set(i,D,value);
                 }
@@ -142,7 +146,7 @@ public class WolfSearch extends binMeta
          }
 
          // verifying best current solution
-         int bestIndex = this.wolves.getBestIndex();
+         int bestIndex = this.wolves.indexOfBest();
          Data newBest = this.wolves.getData(bestIndex);
          double newBestValue = this.wolves.getValue(bestIndex);
          if (this.objValue == null || this.objValue > newBestValue)
@@ -152,63 +156,8 @@ public class WolfSearch extends binMeta
          }
 
          // preparing for next iteration
-         this.monitor();
          it++;
       }
-   }
-
-   // main
-   public static void main(String[] args)
-   {
-      // BitCounter
-      int n = 100;
-      int TIMEMAX = 2000;  // max time
-      Objective obj = new BitCounter(n);
-      WolfSearch ws = new WolfSearch(obj,100,10,2,44,0.1,0.3,TIMEMAX,TIMEMAX);
-      System.out.println(ws);
-      System.out.println("optimizing ...");
-      ws.optimize();
-      System.out.println();
-      System.out.println(ws);
-      System.out.println("solution : " + ws.getSolution());
-      System.out.println();
-
-      // Fermat
-      int exp = 2;
-      int ndigits = 20;
-      TIMEMAX = 10000;
-      obj = new Fermat(exp,ndigits);
-      ws = new WolfSearch(obj,100,12,2,3*ndigits-2,0.1,0.4,TIMEMAX,TIMEMAX);
-      System.out.println(ws);
-      System.out.println("optimizing ...");
-      ws.optimize();
-      System.out.println();
-      System.out.println(ws);
-      System.out.println("solution : " + ws.getSolution());
-      Data x = new Data(ws.solution,0,ndigits-1);
-      Data y = new Data(ws.solution,ndigits,2*ndigits-1);
-      Data z = new Data(ws.solution,2*ndigits,3*ndigits-1);
-      System.out.print("equivalent to the equation : " + x.posLongValue() + "^" + exp + " + " + y.posLongValue() + "^" + exp);
-      if (ws.objValue == 0.0)
-         System.out.print(" == ");
-      else
-         System.out.print(" ?= ");
-      System.out.println(z.posLongValue() + "^" + exp);
-      System.out.println();
-
-      // ColorPartition
-      n = 10;  int m = 20;
-      TIMEMAX = 30000;
-      ColorPartition cp = new ColorPartition(n,m);
-      ws = new WolfSearch(cp,150,20,2,n*m-2,0.1,0.3,TIMEMAX,TIMEMAX);
-      System.out.println(ws);
-      System.out.println("optimizing ...");
-      ws.optimize();
-      System.out.println();
-      System.out.println(ws);
-      System.out.println("solution : " + ws.getSolution());
-      cp.value(ws.solution);
-      System.out.println("corresponding to the matrix :\n" + cp.show());
    }
 }
 

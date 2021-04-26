@@ -3,30 +3,33 @@
  *
  * binMeta project
  *
- * last update: Nov 1, 2020
+ * last update: April 15, 2021
  *
  * AM
  */
 
-public class ColorPartition extends Objective
+import java.util.Iterator;
+import java.util.Random;
+
+public class ColorPartition implements Objective
 {
+   // attributes
    private int n;  // number of rows of color matrix
    private int m;  // number of columns of color matrix
    private boolean[][] matrix;  // color matrix (two colors)
+   private double value;  // objective function value related to current matrix
 
    // Constructor
    public ColorPartition(int n,int m)
    {
       try
       {
-         if (n <= 0) throw new Exception("Impossible to create ColorPartition object: number of rows is zero or even negative");
+         if (n <= 0) throw new Exception("ColorPartition: number of rows is zero or even negative");
          this.n = n;
-         if (m <= 0) throw new Exception("Impossible to create ColorPartition object: number of columns is zero or even negative");
+         if (m <= 0) throw new Exception("ColorPartition: number of columns is zero or even negative");
          this.m = m;
-         this.matrix = new boolean[this.n][this.m];
-         for (int i = 0; i < this.n; i++)  for (int j = 0; j < this.m; j++)  this.matrix[i][j] = false;
-         this.name = "ColorPartition";
-         this.lastValue = null;
+         this.matrix = null;
+         this.value = 0.0;
       }
       catch (Exception e)
       {
@@ -35,31 +38,21 @@ public class ColorPartition extends Objective
       }
    }
 
-   // Shows a graphic representation of the last matrix
-   // (true = "x"; false = "o")
-   public String show()
+   // getName
+   @Override
+   public String getName()
    {
-      String print = "";
-      for (int i = 0; i < n; i++)
-      {
-         for (int j = 0; j < m; j++)
-         {
-            if (this.matrix[i][j])
-               print = print + "x";
-            else
-               print = print + "o";
-         }
-         print = print + "\n";
-      }
-      return print;
+      return "ColorPartition";
    }
 
+   // solutionSample
    @Override
    public Data solutionSample()
    {
       return new Data(this.n*this.m,0.5);
    }
 
+   // value
    @Override
    public double value(Data D)
    {
@@ -74,13 +67,16 @@ public class ColorPartition extends Objective
          System.exit(1);
       }
 
+      // verifying whether memory was already allocated for 'matrix'
+      if (this.matrix == null)  this.matrix = new boolean[this.n][this.m];
+
       // loading the data structure (the bits) in the 2-dimensional matrix
+      Iterator<Integer> It = D.iterator();
       for (int i = 0; i < this.n; i++)
       {
          for (int j = 0; j < this.m; j++)
          {
-            this.matrix[i][j] = (D.getCurrentBit() == 1);
-            D.moveToNextBit();
+            this.matrix[i][j] = (It.next() == 1);
          }
       }
 
@@ -111,20 +107,44 @@ public class ColorPartition extends Objective
          }
       }
       if (count < 0)  count = -count;
-      this.lastValue = value + count;
-      return this.lastValue;
+
+      this.value = value + count;
+      return this.value;
+   }
+
+   // toString
+   public String toString()
+   {
+      if (this.matrix == null)  return "[" + this.getName() + ": not evaluated yet]";
+
+      String print = "";
+      for (int i = 0; i < n; i++)    // graphic representation of the last matrix
+      {                              // (true = "x"; false = "o")
+         for (int j = 0; j < m; j++)
+         {
+            if (this.matrix[i][j])
+               print = print + "x";
+            else
+               print = print + "o";
+         }
+         print = print + "\n";
+      }
+      print = print + "> value: " + this.value + "\n";
+
+      return print;
    }
 
    // main
    public static void main(String[] args)
    {
-      int n = 8;
-      int m = 25;
+      Random R = new Random();
+      int n = 5 + R.nextInt(20);
+      int m = 10 + R.nextInt(40);
       ColorPartition obj = new ColorPartition(n,m);
+      System.out.println(obj);
       Data D = obj.solutionSample();
       Double value = obj.value(D);
       System.out.println(obj);
-      System.out.println(obj.show());
    }
 }
 

@@ -1,53 +1,65 @@
 
 # binMeta project
 
-all: basic objectives methods
+all: Data.jar Memory.class Objectives.jar MetaHeuristics.jar MetaTest.class
 
-basic: Data.class Memory.class
-	echo "basic classes compiled on" > basic
-	date >> basic
+objs=Objective.class BitCounter.class ColorPartition.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class
 
-objectives: Objective.class BitCounter.class ColorPartition.class Fermat.class
-	echo "objectives compiled on" > objectives
-	date >> objectives
+methods=binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class
 
-methods: binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class
-	echo "meta-heuristic methods compiled on" > methods
-	date >> methods
+binMeta.class: binMeta.java Data.jar Objectives.jar
+	javac -cp .:Data.jar:Objectives.jar binMeta.java
 
-binMeta.class: binMeta.java Data.class Objective.class
-	javac -cp . binMeta.java
+BitCounter.class: BitCounter.java Objective.class Data.jar
+	javac -cp .:Data.jar BitCounter.java
 
-BitCounter.class: BitCounter.java Data.class Objective.class
-	javac -cp . BitCounter.java
+ColorPartition.class: ColorPartition.java Objective.class Data.jar
+	javac -cp .:Data.jar ColorPartition.java
 
-ColorPartition.class: ColorPartition.java Data.class Objective.class
-	javac -cp . ColorPartition.java
-
-Data.class: Data.java
+Data.jar: Data.java
 	javac -cp . Data.java
+	jar cvf Data.jar Data*.class > /dev/null
+	\rm Data*.class
 
-Fermat.class: Fermat.java Data.class Objective.class
-	javac -cp . Fermat.java
+Fermat.class: Fermat.java Objective.class Data.jar
+	javac -cp .:Data.jar Fermat.java
 
-LocalOpt.class: LocalOpt.java binMeta.class objectives
-	javac -cp . LocalOpt.java
+Knapsack.class: Knapsack.java Objective.class Data.jar
+	javac -cp .:Data.jar Knapsack.java
 
-Memory.class: Memory.java Data.class
-	javac -cp . Memory.java
+LocalOpt.class: LocalOpt.java Data.jar Objectives.jar binMeta.class 
+	javac -cp .:Data.jar:Objectives.jar LocalOpt.java
 
-Objective.class: Objective.java
-	javac -cp . Objective.java
+Memory.class: Memory.java Data.jar
+	javac -cp .:Data.jar Memory.java
 
-RandomWalk.class: RandomWalk.java binMeta.class objectives
-	javac -cp . RandomWalk.java
+MetaHeuristics.jar: Data.jar Memory.class Objectives.jar $(methods)
+	jar cvf MetaHeuristics.jar $(methods) > /dev/null
 
-WolfSearch.class: WolfSearch.java binMeta.class LocalOpt.class objectives
-	javac -cp . WolfSearch.java
+MetaTest.class: MetaTest.java Data.jar Memory.class Objectives.jar MetaHeuristics.jar
+	javac -cp .:Data.jar:Objectives.jar:MetaHeuristics.jar MetaTest.java
+
+NumberPartition.class: NumberPartition.java Objective.class Data.jar
+	javac -cp .:Data.jar NumberPartition.java
+
+Objectives.jar: $(objs)
+	jar cvf Objectives.jar $(objs) > /dev/null
+
+Objective.class: Objective.java Data.jar
+	javac -cp .:Data.jar Objective.java
+
+RandomWalk.class: RandomWalk.java Data.jar Objectives.jar binMeta.class
+	javac -cp .:Data.jar:Objectives.jar RandomWalk.java
+
+SubsetSum.class: SubsetSum.java Objective.class Data.jar
+	javac -cp .:Data.jar SubsetSum.java 
+
+WolfSearch.class: WolfSearch.java Data.jar Objectives.jar binMeta.class LocalOpt.class
+	javac -cp .:Data.jar:Objectives.jar WolfSearch.java
+
+pclean:
+	\rm -f $(objs) $(methods)
 
 clean:
-	\rm basic objectives methods *.class
-
-jar:
-	jar cvf binMeta.jar *.java *.class
+	\rm -f *.class *.jar
 

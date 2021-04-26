@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: Jan 3, 2021
+ * last update: April 21, 2021
  *
  * AM
  */
@@ -15,7 +15,6 @@ public abstract class binMeta
    protected Double objValue;  // objective function value in solution
    protected Data solution;    // Data object containing solution
    protected long maxTime;     // maximum execution time (ms)
-   private Long startTime = null;  // for method "monitor"
 
    // getName
    public String getName()
@@ -29,7 +28,7 @@ public abstract class binMeta
       return this.obj;
    }
 
-   // getObjVal (in the current solution)
+   // getObjVal (should be the value in the current solution)
    public Double getObjVal()
    {
       return this.objValue;
@@ -43,28 +42,6 @@ public abstract class binMeta
 
    // abstract method "optimize" (it runs the meta-heuristic method)
    public abstract void optimize();
-
-   // monitor
-   public void monitor()
-   {
-      if (this.startTime == null)
-      {
-         System.out.print(this.metaName + " === Getting started");
-         this.startTime = System.currentTimeMillis();
-      }
-      else
-      {
-         System.out.print("\r");
-         long time = System.currentTimeMillis() - this.startTime;
-         System.out.print(this.metaName + " === Best solution " + this.objValue + "; time " + time/1000.0 + " ms");
-      }
-   }
-
-   // reset the monitor
-   public void reset()
-   {
-      this.startTime = null;
-   }
 
    // toString
    public String toString()

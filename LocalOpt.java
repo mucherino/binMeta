@@ -3,13 +3,14 @@
  *
  * binMeta project
  *
- * last update: Jan 3, 2021
+ * last update: April 21, 2021
  *
  * AM
  */
 
+import java.util.Collections;
+import java.util.ArrayList;
 import java.util.TreeSet;
-import java.util.TreeMap;
 
 public class LocalOpt extends binMeta
 {
@@ -18,13 +19,14 @@ public class LocalOpt extends binMeta
    {
       try
       {
-         String msg = "Impossible to create LocalOpt object: ";
-         if (maxTime <= 0) throw new Exception(msg + "the maximum execution time is 0 or even negative");
+         if (maxTime <= 0) throw new Exception("LocalOpt: the maximum execution time is 0 or even negative");
          this.maxTime = maxTime;
-         if (startPoint == null) throw new Exception(msg + "the reference to the starting point is null");
+         if (startPoint == null) throw new Exception("LocalOpt: the reference to the starting point is null");
          this.solution = new Data(startPoint);
-         if (obj == null) throw new Exception(msg + "the reference to the objective is null");
+         if (obj == null) throw new Exception("LocalOpt: the reference to the objective is null");
          this.obj = obj;
+         if (this.obj.solutionSample().numberOfBits() != this.solution.numberOfBits())
+            throw new Exception("LocalOpt: starting point has a number of bits which does not match with objective function");
          this.objValue = this.obj.value(this.solution);
          this.metaName = "LocalOpt";
       }
@@ -35,11 +37,13 @@ public class LocalOpt extends binMeta
       }
    }
 
+   // optimize (by LocalOpt)
    @Override
-   public void optimize()  // by LocalOpt
+   public void optimize()
    {
       long startime = System.currentTimeMillis();
       Data D = new Data(this.solution);
+      int n = D.numberOfBits();
       double value = this.objValue;
 
       // main loop
@@ -50,29 +54,38 @@ public class LocalOpt extends binMeta
          this.objValue = value;
 
          // gradient computation
-         TreeMap<Double,Integer> g = new TreeMap<Double,Integer> ();
-         double gvalue = this.obj.value(D.withCurrentBitFlipped()) - value;
-         if (gvalue < 0.0)  g.put(gvalue,0);
-         while (D.hasNextBit())
+         TreeSet<Integer> indices = new TreeSet<Integer> ();
+         ArrayList<Double> g = new ArrayList<Double> (n);
+         Data.bitIterator It = D.iterator();
+         int i = 0;
+         while (It.hasNext())
          {
-            gvalue = this.obj.value(D.withNextBitFlipped()) - value;
-            if (gvalue < 0.0)  g.put(gvalue,D.getCurrentBitPointer());
+            double gvalue = this.obj.value(It.withNextBitFlipped()) - value;
+            if (gvalue < 0.0)
+            {
+               indices.add(i);
+               g.add(gvalue);
+            }
+            else  g.add(-Double.MAX_VALUE);
+            i++;
          }
 
          // performing full step along the opposite gradient direction
-         if (!g.isEmpty())
+         if (!indices.isEmpty())
          {
-            Data G = new Data(D.numberOfBits(),new TreeSet<Integer> (g.values()));
-            Data E = new Data(D,G,"xor");
+            Data G = new Data(n,indices);
+            Data E = Data.diff(D,G);
             value = this.obj.value(E);
 
             // if it is necessary to perform a partial step to get an improvement
-            while (value >= this.objValue && !g.isEmpty() && System.currentTimeMillis() - startime < this.maxTime)
+            while (value >= this.objValue && !indices.isEmpty() && System.currentTimeMillis() - startime < this.maxTime)
             {
                // remove the current largest g value (the less important)
-               g.pollLastEntry();
-               G = new Data(D.numberOfBits(),new TreeSet<Integer> (g.values()));
-               E = new Data(D,G,"xor");
+               int k = g.indexOf(Collections.max(g));
+               g.set(k,-Double.MAX_VALUE);
+               indices.remove(k);
+               G = new Data(n,indices);
+               E = Data.diff(D,G);
                value = this.obj.value(E);
             }
 
@@ -81,65 +94,6 @@ public class LocalOpt extends binMeta
          }
       }
       while (System.currentTimeMillis() - startime < this.maxTime && value < this.objValue);
-   }
-
-   // main
-   public static void main(String[] args)
-   {
-      int TIMEMAX = 10000;  // max time
-
-      // BitCounter
-      int n = 50;
-      Objective obj = new BitCounter(n);
-      Data D = obj.solutionSample();
-      LocalOpt opt = new LocalOpt(D,obj,TIMEMAX);
-      System.out.println(opt);
-      System.out.println("starting point : " + opt.getSolution());
-      System.out.println("optimizing ...");
-      opt.optimize();
-      System.out.println();
-      System.out.println(opt);
-      System.out.println("solution : " + opt.getSolution());
-      System.out.println();
-
-      // Fermat
-      int exp = 2;
-      int ndigits = 10;
-      obj = new Fermat(exp,ndigits);
-      D = obj.solutionSample();
-      opt = new LocalOpt(D,obj,TIMEMAX);
-      System.out.println(opt);
-      System.out.println("starting point : " + opt.getSolution());
-      System.out.println("optimizing ...");
-      opt.optimize();
-      System.out.println();
-      System.out.println(opt);
-      System.out.println("solution : " + opt.getSolution());
-      Data x = new Data(opt.solution,0,ndigits-1);
-      Data y = new Data(opt.solution,ndigits,2*ndigits-1);
-      Data z = new Data(opt.solution,2*ndigits,3*ndigits-1);
-      System.out.print("equivalent to the equation : " + x.posLongValue() + "^" + exp + " + " + y.posLongValue() + "^" + exp);
-      if (opt.objValue == 0.0)
-         System.out.print(" == ");
-      else
-         System.out.print(" ?= ");
-      System.out.println(z.posLongValue() + "^" + exp);
-      System.out.println();
-
-      // ColorPartition
-      n = 4;  int m = 14;
-      ColorPartition cp = new ColorPartition(n,m);
-      D = cp.solutionSample();
-      opt = new LocalOpt(D,cp,TIMEMAX);
-      System.out.println(opt);
-      System.out.println("starting point : " + opt.getSolution());
-      System.out.println("optimizing ...");
-      opt.optimize();
-      System.out.println();
-      System.out.println(opt);
-      System.out.println("solution : " + opt.getSolution());
-      cp.value(opt.solution);
-      System.out.println("corresponding to the matrix :\n" + cp.show());
    }
 }
 
