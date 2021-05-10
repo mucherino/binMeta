@@ -3,11 +3,12 @@
  *
  * binMeta project
  *
- * last update: Mar 30, 2021
+ * last update: May 10, 2021
  *
  * AM
  */
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.List;
@@ -730,6 +731,51 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          k++;
       }
       return result;
+   }
+
+   // Applies the "crossover" operator to generate a child object from a give list of object parents
+   // -> all parent Data objects are supposed to have the same number of bits; at least 2 parents
+   // -> initially coded by Issa Sanogo (M1 Miage 2020-21)
+   public static Data crossover(List<Data> lD)
+   {
+      int n = 0;
+      int m = 0;
+      try
+      {
+         if (lD == null) throw new Exception("The list of parent Data objects is null");
+         n = lD.size();
+         if (n == 0) throw new Exception("The list of parent Data objects is empty");
+         if (n < 2) throw new Exception("Cannot apply crossover operation with one parent");
+         m = lD.get(0).numberOfBits();
+         for (Data D : lD)  if (m != D.numberOfBits()) throw new Exception("All Data objects are supposed to have the same size (in terms of bits)");
+         if (n > m) throw new Exception("Too many parents (" + n + ") for Data objects of size " + m);
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // randomly positioning the pivots
+      Random R = new Random();
+      ArrayList<Integer> pivot = new ArrayList<Integer> (n);
+      pivot.add(0);
+      while (pivot.size() < n)
+      {
+         int ptest = R.nextInt(m-1);
+         if (!pivot.contains(ptest))  pivot.add(ptest);
+      }
+      pivot.add(m);
+      Collections.sort(pivot);
+
+      // extracting the pieces, and concatenating in one object
+      ArrayList<Data> pieces = new ArrayList<>();
+      for(int i = 0; i < n; i++)
+      {
+         Data D = new Data(lD.get(i),pivot.get(i),pivot.get(i+1));
+         pieces.add(D);
+      }
+      return Data.concat(pieces);
    }
 
    /* Hamming-distance based methods */
@@ -2121,6 +2167,26 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                len = len + nn;
             }
             if (R.nextDouble() < percentage)  forcomparisons.add(D);
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // public static Data crossover(List<Data>)
+            int n = 2 + min + R.nextInt(max - min - 2);
+            int m = 2 + R.nextInt(n - 2);
+            List<Data> list = new ArrayList<Data> (m);
+            while (list.size() < m)  list.add(new Data(n,R.nextDouble()));
+            Data cross = Data.crossover(list);
+            List<Data> test = new ArrayList<Data> (m);
+            for (Data D : list)  test.add(Data.diff(D,cross));
+            Data result = test.get(0);
+            for (int i = 1; i < m; i++)  result = new Data(result,test.get(i),"and");
+            if (result.numberOfZeros() != n) throw new Exception("public static Data crossover(List<Data>)");
          }
          catch (Exception e)
          {

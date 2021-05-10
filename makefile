@@ -1,7 +1,7 @@
 
 # binMeta project
 
-all: Data.jar Memory.class Objectives.jar MetaHeuristics.jar MetaTest.class
+all: Data.jar Objectives.jar Memory.class MetaHeuristics.jar MetaTest.class
 
 objs=Objective.class BitCounter.class ColorPartition.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class
 
@@ -30,8 +30,8 @@ Knapsack.class: Knapsack.java Objective.class Data.jar
 LocalOpt.class: LocalOpt.java Data.jar Objectives.jar binMeta.class 
 	javac -cp .:Data.jar:Objectives.jar LocalOpt.java
 
-Memory.class: Memory.java Data.jar
-	javac -cp .:Data.jar Memory.java
+Memory.class: Memory.java Data.jar Objectives.jar
+	javac -cp .:Data.jar:Objectives.jar Memory.java
 
 MetaHeuristics.jar: Data.jar Memory.class Objectives.jar $(methods)
 	jar cvf MetaHeuristics.jar $(methods) > /dev/null

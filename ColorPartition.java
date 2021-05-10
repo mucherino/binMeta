@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: April 15, 2021
+ * last update: May 4, 2021
  *
  * AM
  */
@@ -132,6 +132,24 @@ public class ColorPartition implements Objective
       print = print + "> value: " + this.value + "\n";
 
       return print;
+   }
+
+   // instance01 (10x6 matrix)
+   public static ColorPartition instance01()
+   {
+      return new ColorPartition(10,6);
+   }
+
+   // instance02 (20x10 matrix)
+   public static ColorPartition instance02()
+   {
+      return new ColorPartition(20,10);
+   }
+
+   // instance03 (50x20 matrix)
+   public static ColorPartition instance03()
+   {
+      return new ColorPartition(50,20);
    }
 
    // main

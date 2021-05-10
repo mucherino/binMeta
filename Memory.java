@@ -3,12 +3,14 @@
  *
  * binMeta project
  *
- * last update: April 14, 2021
+ * last update: May 10, 2021
  *
  * AM
  */
 
 import java.util.ArrayList;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.Random;
 
 public class Memory
@@ -325,6 +327,48 @@ public class Memory
       return this.remove(i);
    }
 
+   // fillUp
+   // -> it fills up the Memory object by creating new random Data objects from the given source
+   // -> the extra parameters (if any) are not specified
+   public void fillUp(Data source,Objective obj)
+   {
+      int n = 0;
+      try
+      {
+         if (this.isFull()) throw new Exception("Impossible to fillUp: Memory object is already full");
+         if (source == null) throw new Exception("Specified Data source is null");
+         n = source.numberOfBits();
+         int cap = this.capacity;
+         int minbits = 0;
+         while (cap > 0)
+         {
+            minbits++;
+            cap = cap >> 1;
+         }
+         if (minbits > n) throw new Exception("Too few bits in Data objects to fill up this Memory object");
+         if (obj == null) throw new Exception("Specified Objective object is null");
+         if (n != obj.solutionSample().numberOfBits()) throw new Exception("Objective is not compatible to Data source (in terms of bits)");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+      Random R = new Random();
+
+      // the source itself may be added
+      if (!this.contains(source))  if (R.nextDouble() < 0.1)  this.add(source,obj.value(source));
+
+      // filling up the rest of the memory with random Data objects
+      if (n > 4)  n = n/2;
+      while (!this.isFull())
+      {
+         Data D = source.randomSelectInNeighbourhood(1+R.nextInt(n-1));
+         double value = obj.value(D);
+         this.add(D,value);
+      }
+   }
+
    // compact
    public void compact()
    {
@@ -544,9 +588,6 @@ public class Memory
       this.accessTime[i] = System.currentTimeMillis();
       this.param[i][j] = param;
    }
-
-   // toString (only basic information about the Memory object, not its content)
-   // TO BE IMPLEMENTED!
 
    // toString
    public String toString()
@@ -840,6 +881,43 @@ public class Memory
             M.getValueOf(last);
             j = M.indexOfUseless();
             if (j == M.indexOf(last)) throw E2;
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+      }
+      System.out.println("OK");
+
+      // fillUp
+      System.out.print("Testing fillUp ... ");
+      for (int itest = 0; itest < NTESTS; itest++)
+      {
+         try
+         {
+            // random arguments
+            int capacity = min + R.nextInt(max - min);
+            Memory M = new Memory(capacity);
+            int n1 = 1 + R.nextInt(capacity - 1);
+            Objective obj = new BitCounter(capacity);
+
+            // filling part of the Memory
+            while (M.numberOfEntries() < n1)
+            {
+               Data D = obj.solutionSample();
+               double value = obj.value(D);
+               M.add(D,value);
+            }
+
+            // filling up the rest of the Memory
+            Data source = new Data(capacity,0.5);
+            M.fillUp(source,obj);
+
+            // verification
+            Exception E = new Exception("public void fillUp(Data,Objective)");
+            if (M.isEmpty()) throw E;
+            if (!M.isFull()) throw E;
          }
          catch (Exception e)
          {

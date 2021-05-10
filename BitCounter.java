@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: April 21, 2021
+ * last update: May 4, 2021
  *
  * AM
  */
@@ -77,6 +77,24 @@ public class BitCounter implements Objective
       else
          print = print + "objective was not evaluated yet";
       return print + "]";
+   }
+
+   // instance01 (instance with 10 bits)
+   public static BitCounter instance01()
+   {
+      return new BitCounter(10);
+   }
+
+   // instance02 (instance with 100 bits)
+   public static BitCounter instance02()
+   {
+      return new BitCounter(100);
+   }
+
+   // instance03 (instance with 1000 bits)
+   public static BitCounter instance03()
+   {
+      return new BitCounter(1000);
    }
 
    // main
