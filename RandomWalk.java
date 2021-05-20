@@ -42,7 +42,7 @@ public class RandomWalk extends binMeta
    {
       Random R = new Random();
       Data D = new Data(this.solution);
-      int maxstep = Math.max(3,D.numberOfBits());  // Hamming distance is randomly selected in [1,maxstep]
+      int maxstep = Math.max(3,D.numberOfBits());  // Hamming distance will be randomly selected in [1,maxstep]
       long startime = System.currentTimeMillis();
 
       // main loop

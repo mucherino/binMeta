@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 10, 2021
+ * last update: May 20, 2021
  *
  * AM
  */
@@ -14,8 +14,8 @@ public class MetaTest
 {
    // test parameters
    static boolean LaTex = true;
-   static int TIMEMAX = 2000;  // max time for meta-heuristic methods
-   static String [] objectives = {"BitCounter","ColorPartition","Fermat","SubsetSum","NumberPartition","Knapsack"};
+   static int TIMEMAX = 1000;  // max time for meta-heuristic methods
+   static String [] objectives = {"BitCounter","ColorPartition","Pi","Fermat","SubsetSum","NumberPartition","Knapsack","WolfSearch"};
    static String [] instances = {"instance01","instance02","instance03"};
    static String [] methods = {"LocalOpt","RandomWalk","WolfSearch"}; 
 
@@ -87,7 +87,7 @@ public class MetaTest
                else if (methods[imeth].equals("RandomWalk"))
                   mh = new RandomWalk(D,current,TIMEMAX);
                else if (methods[imeth].equals("WolfSearch"))
-                  mh = new WolfSearch(current,100,100,2,(int) Math.floor(0.7*size),0.1,0.4,TIMEMAX,TIMEMAX);
+                  mh = new WolfSearch(current,100,100,2,(int) Math.floor(0.7*size),0.1,0.4,TIMEMAX);
                else
                {
                   System.out.println("Unknown meta-heuristic search " + methods[imeth]);
@@ -105,9 +105,21 @@ public class MetaTest
                {
                   System.out.println(mh);
                   if (size <= 100)
-                     System.out.println("solution : " + mh.getSolution());
+                  {
+                     if (current instanceof WolfSearch)
+                     {
+                        WolfSearch ws = (WolfSearch) current;
+                        System.out.println("optimal parameters : " + ws.parametersToString(mh.getSolution()));
+                     }
+                     else
+                     {
+                        System.out.println("solution : " + mh.getSolution());
+                     }
+                  }
                   else
+                  {
                      System.out.println("solution omitted (number of bits is " + size + ")");
+                  }
                }
             }
             if (LaTex)

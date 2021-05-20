@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 10, 2021
+ * last update: May 13, 2021
  *
  * AM
  */
@@ -294,7 +294,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          if (last < 0) throw new Exception("Specified last bit index is negative");
          if (last > D.numberOfBits())
             throw new Exception("Specified last bit index " + last + " is out of range: [0," + D.numberOfBits() + ")");
-         if (last <= first) throw new Exception("Specified first bit index needs to be stricly smaller than specified last bit index");
+         if (last <= first) throw new Exception("Specified first bit index needs to be strictly smaller than specified last bit index");
 
          this.size = last - first;
          int N = 1 + (this.size - 1)/8;
@@ -733,7 +733,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return result;
    }
 
-   // Applies the "crossover" operator to generate a child object from a give list of object parents
+   // Applies the "crossover" operator to generate a child object from a given list of object parents
    // -> all parent Data objects are supposed to have the same number of bits; at least 2 parents
    // -> initially coded by Issa Sanogo (M1 Miage 2020-21)
    public static Data crossover(List<Data> lD)
@@ -770,7 +770,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
 
       // extracting the pieces, and concatenating in one object
       ArrayList<Data> pieces = new ArrayList<>();
-      for(int i = 0; i < n; i++)
+      for (int i = 0; i < n; i++)
       {
          Data D = new Data(lD.get(i),pivot.get(i),pivot.get(i+1));
          pieces.add(D);
@@ -1178,22 +1178,50 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return B.add(BigInteger.ONE);
    }
 
-   // Converts the Data object in positive float of form 0.m (not tested in main)
+   // Converts the Data object in nonnegative float of form 0.m (m is the long value of the bit sequence)
    public float floatValue()
    {
       int l = this.numberOfBits();
-      if (l > 30)  l = 30;
-      Data mantissa = new Data(this,0,l-1);
+      Data mantissa = this;
+      if (l > 30)
+      {
+         l = 30;
+         mantissa = new Data(this,0,30);
+      }
       return (float) mantissa.longValue() / (1 << l);
    }
 
-   // Converts the Data object in positive double of form 0.m (not tested in main)
+   // Converts the Data object in a nonnegative float uniformly placed in the range [0,1]
+   public float floatValueNormalized()
+   {
+      int l = this.numberOfBits();
+      if (l > 30)  l = 30;
+      Data max = new Data(l,true);
+      float scale = 1.0f / max.floatValue();
+      return scale*this.floatValue();
+   }
+
+   // Converts the Data object in nonnegative double of form 0.m (m is the long value of the bit sequence)
    public double doubleValue()
    {
       int l = this.numberOfBits();
-      if (l > 62)  l = 62;
-      Data mantissa = new Data(this,0,l-1);
+      Data mantissa = this;
+      if (l > 62)
+      {
+         l = 62;
+         mantissa = new Data(this,0,62);
+      }
       return (double) mantissa.longValue() / (1L << l);
+   }
+
+   // Converts the Data object in a nonnegative double uniformly placed in the range [0,1]
+   public double doubleValueNormalized()
+   {
+      int l = this.numberOfBits();
+      if (l > 62)  l = 62;
+      Data max = new Data(l,true);
+      double scale = 1.0 / max.doubleValue();
+      return scale*this.doubleValue();
    }
 
    // Generates a new Data object from a char
@@ -2406,6 +2434,74 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                if (!B.add(BigInteger.ONE).equals(D.posBigIntegerValue())) throw E;
                if (R.nextDouble() < percentage)  forcomparisons.add(D);
             }
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         // float
+         try
+         {
+            String s = "";
+            int n = min + R.nextInt(28 - min);
+            float f = R.nextFloat();
+            float g = f;
+            float eps = 1.0f;
+            for (int i = 0; i < n; i++)
+            {
+               g = 2.0f*g;
+               if (g < 1.0)
+               {
+                  s = s + "0";
+               }
+               else
+               {
+                  s = s + "1";
+                  g = g - 1.0f;
+               }
+               eps = 0.5f*eps;
+            }
+            Data D = new Data(s);
+            g = D.floatValue();
+            if (Math.abs(g - f) > eps) throw new Exception("public float floatValue()");
+            g = D.floatValueNormalized();
+            if (g < 0.0f || g > 1.0f) throw new Exception("public float floatValueNormalized()");
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         // double
+         try
+         {
+            String s = "";
+            int n = min + R.nextInt(60 - min);
+            double d = R.nextDouble();
+            double g = d;
+            double eps = 1.0; 
+            for (int i = 0; i < n; i++)
+            {
+               g = 2.0*g;
+               if (g < 1.0)
+               {
+                  s = s + "0";
+               }
+               else
+               {
+                  s = s + "1";
+                  g = g - 1.0;
+               }
+               eps = 0.5*eps;
+            }
+            Data D = new Data(s);
+            g = D.doubleValue(); 
+            if (Math.abs(g - d) > eps) throw new Exception("public double doubleValue()");
+            g = D.doubleValueNormalized();
+            if (g < 0.0 || g > 1.0) throw new Exception("public double doubleValueNormalized()");
          }
          catch (Exception e)
          {

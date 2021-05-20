@@ -48,6 +48,13 @@ and 2020-21. Starting from the second semester of the academic year 2020-21, thi
 followed by a group of Master students (first year) of the MIAGE teaching program at ISTIC, University 
 of Rennes1, over a period covering 3 months.
 
+When a commit holds the name of a course, this indicates that it represents the last commit related
+to the work performed in the framework of that course, together with the academic year. 
+
+When a commit holds the name of a conference (or any other scientific publication), this indicates 
+that the corresponding version of the package was used for the computational experiments presented
+in that scientific publication.
+
 And to end: why "binMeta"? The "bin" part can be interpreted as "binary", which is important
 to point out in this project because all the implemented meta-heuristic searches are supposed 
 to directly work with a binary representations of the data. Moreover, if you know some German, 
