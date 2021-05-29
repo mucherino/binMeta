@@ -1,12 +1,20 @@
 
 REFERENCES
 
-This file contains the main references to the meta-heuristic searches.
+About binMeta.
+
+1. A. Mucherino
+   binMeta: a New Java Package for Meta-heuristic Searches,
+   to appear in Lectures Notes in Computer Science, 2021.
+
+About the implemented meta-heuristic searches.
 
 WOLF SEARCH (initial commit on Dec 13, 2020)
 
-R. Tang, S. Fong, X.S. Yang, S. Deb,
-Wolf Search Algorithm with Ephemeral Memory,
-IEEE Proceedings, 7^th International Conference on Digital Information Management (ICDIM 2012),
-Macau, 165-172, 2012.
+1. R. Tang, S. Fong, X.S. Yang, S. Deb,
+   Wolf Search Algorithm with Ephemeral Memory,
+   IEEE Proceedings, 7^th International Conference on Digital Information Management (ICDIM 2012),
+   Macau, 165-172, 2012.
+
+last update: May 29, 2021.
 

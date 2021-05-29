@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 4, 2021
+ * last update: May 29, 2021
  *
  * AM
  */
@@ -69,7 +69,7 @@ public class Fermat implements Objective
       Data x = new Data(D,0,this.ndigits);
       Data y = new Data(D,this.ndigits,2*this.ndigits);
       Data z = new Data(D,2*this.ndigits,3*this.ndigits);
-      long lx = x.posLongValue();
+      long lx = 1L + x.posLongValue();
       double xx = 1.0;  for (int k = 0; k < this.exp; k++)  xx = lx*xx;
       long ly = lx + y.longValue();
       double yy = 1.0;  for (int k = 0; k < this.exp; k++)  yy = ly*yy;
@@ -95,17 +95,26 @@ public class Fermat implements Objective
       }
 
       // writing down the equation
-      String print = "";
       Data x = new Data(D,0,this.ndigits);
       Data y = new Data(D,this.ndigits,2*this.ndigits);
       Data z = new Data(D,2*this.ndigits,3*this.ndigits);
-      long lx = x.posLongValue();
-      print = print + lx + "^" + this.exp + " + ";
-      long ly = lx + y.posLongValue();
-      print = print + ly + "^" + this.exp + " = ";
-      long lz = lx + ly + z.posLongValue();
-      print = print + lz + "^" + this.exp;
-      if (evaluate)  print = print + " (value is " + this.value(D) + ")";
+      long lx = 1L + x.posLongValue();
+      String left = lx + "^" + this.exp + " + ";
+      long ly = lx + y.longValue();
+      left = left + ly + "^" + this.exp;
+      long lz = ly + z.longValue();
+      String right = lz + "^" + this.exp;
+
+      // evaluation of the equation (optional)
+      String print = "";
+      if (evaluate)
+      {
+         double v = this.value(D);
+         print = left;
+         if (v == 0)  print = print + " = ";  else  print = print + " <> ";
+         print = print + right + " (value is " + v + ")";
+      }
+      else  print = left + " ?= " + right;
 
       return print;
    }

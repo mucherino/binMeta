@@ -6,7 +6,7 @@
  * initial version coded by Alban Gutierrez Andre (M1 Info 2020-21) 
  *                      and Safietou Diallo (M1 Miage 2020-21)
  *
- * last update: April 26, 2021
+ * last update: May 29, 2021
  *
  * AM
  */
@@ -109,7 +109,7 @@ public class Knapsack implements Objective
       return new Data(this.listOfValues.size(),0.5);
    }
 
-   // value
+   // value (new implementation of the method proposed by Charly Colombu, M2 Miage 2020-21)
    @Override
    public double value(Data D)
    {
@@ -142,11 +142,11 @@ public class Knapsack implements Objective
       while (ItData.hasNext() && ItWeight.hasNext())  sumWeights = sumWeights + ItData.next()*ItWeight.next();
 
       // the constraint on the maximum weight is in the objective function
-      double objvalue = -sumValues;
-      if (sumWeights > this.maxWeight)
-      {
-         objvalue = objvalue + (sumWeights - this.maxWeight);
-      }
+      double objvalue = 0.0;
+      if (sumWeights <= this.maxWeight)
+         objvalue = -sumValues;
+      else
+         objvalue = sumWeights - this.maxWeight;
       return objvalue;
    }
 
@@ -195,8 +195,8 @@ public class Knapsack implements Objective
          constrName = "Knapsack(List<Double>,List<Double>,double)";
          ArrayList<Double> values = new ArrayList<Double> (10);
          ArrayList<Double> weights = new ArrayList<Double> (10);
-         values.add(5.0);  weights.add(7.0);  // solution 27 with 1, 2, 3, 8, 9
-         values.add(4.0);  weights.add(2.0);
+         values.add(5.0);  weights.add(7.0);  // solution 27 with indices 0, 1, 2, 7, 8 (weight is 15)
+         values.add(4.0);  weights.add(2.0);  // solution 27 with indices 1, 2, 6, 7, 8, 9 (weight is 13)
          values.add(7.0);  weights.add(1.0);
          values.add(2.0);  weights.add(9.0);
          values.add(1.0);  weights.add(5.0);
@@ -212,7 +212,7 @@ public class Knapsack implements Objective
          constrName = "Knapsack(double[],double[],double)";
          double [] values = new double [] {1,4,5,8,1,3,9,7,12,8};
          double [] weights = new double [] {7,8,2,6,3,12,11,9,4,6};
-         obj = new Knapsack(values,weights,27);  // solution 37 with 2, 3, 4, 9, 10
+         obj = new Knapsack(values,weights,27);  // solution 37 with indices 1, 2, 3, 8, 9
       }
       System.out.println("using constructor " + constrName);
       System.out.println(obj);
