@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 13, 2021
+ * last update: June 2, 2021
  *
  * AM
  */
@@ -481,7 +481,13 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return byteArray;
    }
 
-   /* bitIterator */
+   /* bitIterator 
+    *
+    * it allows for iterating on:
+    * - the bits of the Data object (hasNext, next, hasPrevious, previous)
+    * - the Data objects obtained by flipping the current bit (hasNext, withNextBitFlipped, hasPrevious, withPreviousBitFlipped)
+    * - the Data objects belong to the "spiral" around the current bit (hasNextOnSpiral, nextOnSpiral)
+    */
 
    @Override
    // Gives a bitIterator on the bits of the Data object
@@ -494,15 +500,26 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    public class bitIterator implements Iterator<Integer>
    {
       // bitIterator attributes
-      private int bitPointer;
       private Data data;  // reference to Data object
+      private int bitPointer;  // bit pointer
+      private Integer spiPointer;  // spiral pointer
+      private Data spiral;
 
       // constructor
       public bitIterator(Data data)
       {
          super();
-         this.bitPointer = -1;
          this.data = data;
+         this.bitPointer = -1;
+         this.spiPointer = null;
+         this.spiral = null;
+      }
+
+      // spiReset (private)
+      private void spiReset()
+      {
+         this.spiPointer = null;
+         this.spiral = null;
       }
 
       @Override
@@ -518,6 +535,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       {
          if (!this.hasNext()) throw new NoSuchElementException();
          this.bitPointer++;
+         this.spiReset();
          return this.data.getBit(this.bitPointer);
       }
 
@@ -532,6 +550,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       {
          if (!this.hasPrevious()) throw new NoSuchElementException();
          this.bitPointer--;
+         this.spiReset();
          return this.data.getBit(this.bitPointer);
       }
 
@@ -565,6 +584,52 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          Data D = new Data(this.data);
          D.flipBit(this.bitPointer);
          return D;
+      }
+
+      // hasNextOnSpiral
+      // -> initial version coded by Narcisse Kouadio (M2 Miage 2020-21)
+      public boolean hasNextOnSpiral()
+      {
+         int n = this.data.numberOfBits();
+         if (n < 3)  return false;
+         if (this.bitPointer < 1 || this.bitPointer >= n - 1)  return false;
+         if (this.spiPointer != null)
+         {
+            int nextPointer = 0;
+            if (this.spiPointer < 0)
+               nextPointer = this.bitPointer - this.spiPointer + 1;
+            else
+               nextPointer = this.bitPointer - this.spiPointer;
+            if (nextPointer < 0 || nextPointer >= n)  return false;
+         }
+         return true;
+      }
+
+      // nextOnSpiral
+      // -> initial version coded by Narcisse Kouadio (M2 Miage 2020-21)
+      public Data nextOnSpiral() throws NoSuchElementException
+      {
+         int n = this.data.numberOfBits();
+         NoSuchElementException E = new NoSuchElementException("Next Data object on spiral does not exist");
+         if (n < 3) throw E;
+         if (this.bitPointer < 1 || this.bitPointer >= n - 1) throw E;
+         if (this.spiPointer == null)
+         {
+            this.spiPointer = 1;
+            this.spiral = new Data(this.data);
+            this.spiral.flipBit(this.bitPointer + this.spiPointer);
+         }
+         else
+         {
+            if (this.spiPointer > 0)
+               this.spiPointer = -this.spiPointer;
+            else
+               this.spiPointer = -this.spiPointer + 1;
+            int next = this.bitPointer + this.spiPointer;
+            if (next < 0 || next >= n) throw E;
+            this.spiral.flipBit(next);
+         }
+         return this.spiral;
       }
    }
 
@@ -776,6 +841,64 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          pieces.add(D);
       }
       return Data.concat(pieces);
+   }
+
+   // Generates a random Data object obtained by flipping some bits of the Data object D to fit with those of an Attractor
+   // -> the speed argument indicates the intensity of the attraction, in the real interval [0,1]
+   //    (lower the speed, more calls to the method are necessary to make D become identical to Attractor)
+   // -> coded by Mouhammadou Ba, Yaya Simpara, Vildan Ozturk (M2 Miage 2020-21)
+   public static Data attract(Data D,Data Attractor,double speed)
+   {
+      try
+      {
+         if (D == null) throw new Exception("First input Data object D is null");
+         if (Attractor == null) throw new Exception("Second input Data object is null");
+         if (D.numberOfBits() != Attractor.numberOfBits()) throw new Exception("The two specified input Data objects differ in bit length");
+         if (speed < 0.0 || speed > 1.0)
+            throw new Exception("Specified speed argument is supposed to be contained in the interval [0,1]");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // constructing the attracted Data object
+      Data result = null;
+      if (speed == 0.0)
+      {
+         result = new Data(D);  // no changes
+      }
+      else if (speed == 1.0)
+      {
+         result = new Data(Attractor);  // the result is the Attractor
+      }
+      else
+      {
+         Data Diff = Data.diff(D,Attractor);
+         Data cDiff = Data.control(Diff,true,speed);
+         result = Data.diff(D,cDiff);
+      }
+
+      return result;
+   }
+
+   // Generates a random Data object obtained by flipping some bits of the Data object D to be the opposite of those of a Repellent
+   // -> the speed argument indicates the intensity of the repulsion, in the real interval [0,1]
+   //    (lower the speed, more calls to the method are necessary to make D become the opposite of Repellent)
+   public static Data repel(Data D,Data Repellent,double speed)
+   {
+      try
+      {
+         if (Repellent == null) throw new Exception("Second input Data object is null");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      return Data.attract(D,new Data(Repellent,true),speed);
    }
 
    /* Hamming-distance based methods */
@@ -1938,11 +2061,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       System.out.print("Testing bitIterator ... ");
       for (int itest = 0; itest < NTESTS; itest++)
       {
+         Exception E = new Exception("internal class bitIterator");
          try
          {
+            // iterating on bits and Data objects with next (or previous) bit flipped
             int n = min + R.nextInt(max - min);
             Data D = new Data(n,0.4 + 0.2*R.nextDouble());
-            Exception E = new Exception("subclass bitIterator");
             bitIterator It = D.iterator();
             if (!It.hasNext()) throw E;
             if (It.hasPrevious()) throw E;
@@ -1997,6 +2121,48 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (n > 1 && !It.hasNext()) throw E;
             It.reset();
             if (new Data(bitFlipped,It.withNextBitFlipped(),"xor").numberOfZeros() != D.numberOfBits()) throw E;
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // iterating on spiral Data objects generated from the current Data object and with center at current bit
+            int n = min + R.nextInt(max - min);
+            Data D = new Data(n,0.4 + 0.2*R.nextDouble());
+            bitIterator It = D.iterator();
+            int k = R.nextInt(n);
+            for (int i = 0; i < k; i++)  It.next();
+            if (k != 0 && k != n - 1)
+            {
+               int m = k;
+               if (n - k - 1 < m)  m = n - k - 1;
+               int h = R.nextInt(m);
+               if (h > 0)
+               {
+                  Data pF = null;
+                  Data F = null;
+                  Data df = null;
+                  for (int i = 0; i < 2*h; i++)
+                  {
+                     F = It.nextOnSpiral();
+                     if (!F.check_invariants()) throw E;
+                     if (pF != null)
+                     {
+                        df = Data.diff(F,pF);
+                        if (df.numberOfOnes() != 1) throw E;
+                     }
+                     pF = new Data(F);
+                  }
+                  df = Data.diff(D,F);
+                  if (df.numberOfOnes() != 2*h) throw E;
+               }
+               for (int i = 2*h; i < 2*m + 3; i++)  if (It.hasNextOnSpiral())  It.nextOnSpiral();
+               if (It.hasNextOnSpiral()) throw E;
+            }
          }
          catch (Exception e)
          {
@@ -2215,6 +2381,80 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             Data result = test.get(0);
             for (int i = 1; i < m; i++)  result = new Data(result,test.get(i),"and");
             if (result.numberOfZeros() != n) throw new Exception("public static Data crossover(List<Data>)");
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // public static Data attract(Data,Data,double)
+            int n = min + R.nextInt(max - min);
+            Data Attractor = new Data(n,0.5);
+            Data D = new Data(n,0.1 + 0.8*R.nextDouble());
+            double speed = 0.0;
+            if (R.nextInt(9) != 0)
+            {
+               speed = 1.0;
+               if (R.nextInt(9) != 0)  speed = R.nextDouble();
+            } 
+            Data S = Data.attract(D,Attractor,speed);
+            Exception E = new Exception("public static Data attract(Data,Data,double)");
+            if (S == null) throw E;
+            if (!S.check_invariants()) throw E;
+            if (S.numberOfBits() != D.numberOfBits() && S.numberOfBits() != Attractor.numberOfBits()) throw E;
+            if (S.numberOfBytes() != D.numberOfBytes() && S.numberOfBytes() != Attractor.numberOfBytes()) throw E;
+            if (speed == 0.0)
+            {
+               if (!S.equals(D)) throw E;
+            }
+            else if (speed == 1.0)
+            {
+               if (!S.equals(Attractor)) throw E;
+            }
+            else
+            {
+               if (Data.diff(D,Attractor).numberOfOnes() < Data.diff(S,Attractor).numberOfOnes()) throw E;
+            }
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // public static Data repel(Data,Data,double)
+            int n = min + R.nextInt(max - min);
+            Data Repellent = new Data(n,0.4 + 0.2*R.nextDouble());
+            Data D = new Data(n,0.2 + 0.6*R.nextDouble());
+            double speed = 0.0;
+            if (R.nextInt(11) != 0)
+            {
+               speed = 1.0;
+               if (R.nextInt(8) != 0)  speed = R.nextDouble();
+            }
+            Data S = Data.repel(D,Repellent,speed);
+            Exception E = new Exception("public static Data repel(Data,Data,double)");
+            if (S == null) throw E;
+            if (!S.check_invariants()) throw E;
+            if (S.numberOfBits() != D.numberOfBits() && S.numberOfBits() != Repellent.numberOfBits()) throw E;
+            if (S.numberOfBytes() != D.numberOfBytes() && S.numberOfBytes() != Repellent.numberOfBytes()) throw E;
+            if (speed == 0.0)
+            {
+               if (!S.equals(D)) throw E;
+            }
+            else if (speed == 1.0)
+            {
+               if (!S.equals(new Data(Repellent,true))) throw E;
+            }
+            else
+            {
+               if (Data.diff(D,Repellent).numberOfOnes() > Data.diff(S,Repellent).numberOfOnes()) throw E;
+            }
          }
          catch (Exception e)
          {
