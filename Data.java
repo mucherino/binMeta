@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: June 2, 2021
+ * last update: June 3, 2021
  *
  * AM
  */
@@ -468,6 +468,17 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return nOnes;
    }
 
+   // Gives the number of bits equal to 0 or 1 (selected via the boolean argument)
+   public int numberOfBits(boolean bitValue)
+   {
+      int n = 0;
+      if (bitValue)
+         n = this.numberOfOnes();
+      else
+         n = this.numberOfZeros();
+      return n;
+   }
+
    // Creates a new array of bytes with the bytes forming the Data object
    public byte[] toByteArray()
    {
@@ -643,9 +654,52 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return new Data(D1,D2,"xor");
    }
 
-   // Generates a new Data object which is basically a copy of the Data object D where the percentage
-   // of bits equal to "bitValue" are reduced to the given percentage p (p = 0 would make all these bits
-   // disappear, and p = 1 would keep all of them)
+   // Generates a new Data object which is a copy of the input Data object D where the number of bits
+   // having value corresponding to "bitValue" is reduced to "nbits". The value of "nbits" is supposed
+   // to be in the interval [0,m], where m is the number of bits corresponding to "bitValue".
+   public static Data control(Data D,boolean bitValue,int nbits)
+   {
+      int cnbits = 0;
+      try
+      {
+         if (D == null) throw new Exception("Input Data object is null");
+         if (nbits < 0) throw new Exception("Specified number of bits is negative");
+         cnbits = D.numberOfBits(bitValue);
+         if (nbits > cnbits)  throw new Exception("Specified number of bits exceeds the current number of bits of the given type");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // nothing to do if nbits reflects the current state
+      if (nbits == cnbits)  return new Data(D);
+
+      // if no bits corresponding to the bitValue need to be left
+      int n = cnbits - nbits;
+      if (n == cnbits)  return new Data(D.numberOfBits(),!bitValue);
+
+      // removing (flipping) "cnbits-nbits" randomly-selected bits corresponding to the bitValue
+      Random R = new Random();
+      int bit = 0;
+      if (bitValue)  bit = 1;
+      Data newD = new Data(D);
+      while (n > 0)
+      {
+         int k = R.nextInt(newD.numberOfBits());
+         if (newD.getBit(k) == bit)
+         {
+            newD.flipBit(k);
+            n--;
+         }
+      }
+      return newD;
+   }
+
+   // Generates a new Data object which is a copy of the input Data object D where the percentage of bits 
+   // equal to "bitValue" are reduced to the given percentage p (p = 0 would make all these bits disappear, 
+   // while p = 1 would keep all of them)
    public static Data control(Data D,boolean bitValue,double p)
    {
       try
@@ -659,26 +713,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          System.exit(1);
       }
 
-      // preparing variables
-      int bit = 0;
-      if (bitValue)  bit = 1;
-      int n = D.numberOfZeros();
-      if (bitValue)  n = D.numberOfBits() - n;
+      // changing probability p in number of bits
+      int n = D.numberOfBits(bitValue);
+      int nbits = (int) ((1.0 - p)*n);
 
-      // removing (flipping) a percentage of bits corresponding to bitValue
-      Random R = new Random();
-      Data newD = new Data(D);
-      int np = (int) ((1.0 - p)*n);
-      while (np > 0)
-      {
-         int k = R.nextInt(newD.numberOfBits());
-         if (newD.getBit(k) == bit)
-         {
-            newD.flipBit(k);
-            np--;
-         }
-      }
-      return newD;
+      // invoking Data.control(Data,boolean,int) and returning
+      return Data.control(D,bitValue,nbits);
    }
 
    // Generates a new Data object from a Data object given as an argument, where:
@@ -1053,7 +1093,58 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return this.randomSelectInNeighbourhood(0,h,nsseq,subseqs);
    }
 
-   /* Data conversions from and to other data (primitive) types */
+   // Selects a random Data object so that the Hamming distance to every element in given array of Data objects
+   // is at least equal to the specified value (the argument h); when this is not possible, a close guess is attempted
+   // -> coded by Fatma Hamdi (M2 Miage 2020-21)
+   public static Data randomSelectAtDistanceFrom(int h,Data[] DataArray)
+   {
+      int n = 0;
+      try
+      {
+         if (h < 0) throw new Exception("Specified Hamming distance is negative");
+         if (DataArray == null) throw new Exception("Specified array of Data objects is null");
+         if (DataArray.length == 0) throw new Exception("Specified array of Data objects is empty");
+         n = DataArray[0].numberOfBits();
+         for (int i = 1; i < DataArray.length; i++)
+             if (n != DataArray[i].numberOfBits())
+                throw new Exception("Data objects in the array are supposed to have the same length (in terms of bits)");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // if only one Data object is in the array
+      if (DataArray.length == 1)  return DataArray[0].randomSelectInNeighbourhood(h,h);
+
+      // we compare the objects in the array against each other
+      Data df = new Data(n,false); 
+      Data cdf = null;
+      for (int i = 0; i < DataArray.length; i++)
+      {
+         for (int j = i + 1; j < DataArray.length; j++)
+         {
+            cdf = Data.diff(DataArray[i],DataArray[j]);
+            df = new Data(df,cdf,"or");
+         }
+      }
+
+      // the bits equal to 0 in df allow us to move farther from each object in the array
+      int mainBits = df.numberOfZeros();
+
+      // if flipping all these bits can give us a Hamming distance larger than h
+      if (mainBits > h)  df = Data.control(df,false,h);
+
+      // if this number of bits is not sufficient to attain a Hamming distance equal to h
+      if (mainBits < h)  df = Data.control(df,true,n-h);
+
+      // we randomly select an object in DataArray, and we apply the changes specified in "not df"
+      int k = new Random().nextInt(DataArray.length);
+      return Data.diff(DataArray[k],new Data(df,true));
+   }
+
+   /* Data conversions from and to other data (mostly primitive) types */
 
    // Generats a new Data object from a boolean variable
    // (the second argument indicates the total number of bits, but only the last bit is significative)
@@ -2040,7 +2131,10 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             Data D = new Data(n,bits);
             Exception E = new Exception("Methods to count bits");
             if (D.numberOfBits() != n) throw E;
+            if (D.numberOfBits() != D.numberOfBits(false) + D.numberOfBits(true)) throw E;
             if (D.numberOfBits() != D.numberOfZeros() + D.numberOfOnes()) throw E;
+            if (D.numberOfOnes() != D.numberOfBits(true)) throw E;
+            if (D.numberOfZeros() != D.numberOfBits(false)) throw E;
             if (D.numberOfOnes() != bits.size()) throw E;
             if (D.numberOfZeros() != n - bits.size()) throw E;
             Data F = new Data(n,D.toByteArray());
@@ -2197,6 +2291,31 @@ public class Data implements Comparable<Data>, Iterable<Integer>
               lD.add(D1);
             else
               lD.add(D2);
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // public static Data control(Data,boolean,int)
+            int n = min + R.nextInt(max - min);
+            Data D = new Data(n,0.6);
+            Exception E = new Exception("public static Data control(Data,boolean,int)");
+            boolean bitValue = R.nextBoolean();
+            int cnbits = D.numberOfBits(bitValue);
+            if (cnbits > 0)
+            {
+               int nbits = R.nextInt(cnbits);
+               Data C = Data.control(D,bitValue,nbits);
+               if (C == null) throw E;
+               if (!C.check_invariants()) throw E;
+               if (C.numberOfBits() != D.numberOfBits()) throw E;
+               if (C.numberOfBytes() != D.numberOfBytes()) throw E;
+               if (C.numberOfBits(bitValue) != nbits) throw E;
+            }
          }
          catch (Exception e)
          {
@@ -2570,6 +2689,37 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (FF.hammingDistanceTo(DD) > u) throw E;
             if (D.hammingDistanceTo(F) != DD.hammingDistanceTo(FF)) throw E;
             if (R.nextDouble() < 2.0*percentage)  forcomparisons.add(FF);
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // public static Data randomSelectAtDistanceFrom(int,Data[])
+            int n = min + R.nextInt(max - min);
+            int m = min + R.nextInt(n);
+            Data df = new Data(n,false);
+            Data[] array = new Data[m];
+            for (int i = 0; i < m; i++)
+            {
+               array[i] = new Data(n,0.2 + 0.4*R.nextDouble());
+               df = new Data(df,array[i],"or");
+            }
+            int k = df.numberOfZeros();
+            if (k > 0)
+            {
+               int h = 1;
+               if (k > 1)  h = 1 + R.nextInt(k-1);
+               Data F = Data.randomSelectAtDistanceFrom(h,array);
+               Exception E = new Exception("public static Data randomSelectAtDistanceFrom(int,Data[])");
+               if (F == null) throw E;
+               if (!F.check_invariants()) throw E;
+               if (F.numberOfBits() != n) throw E;
+               for (int i = 0; i < m; i++)  if (F.hammingDistanceTo(array[i]) < h) throw E;
+            }
          }
          catch (Exception e)
          {
