@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: June 3, 2021
+ * last update: June 8, 2021
  *
  * AM
  */
@@ -1104,10 +1104,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          if (h < 0) throw new Exception("Specified Hamming distance is negative");
          if (DataArray == null) throw new Exception("Specified array of Data objects is null");
          if (DataArray.length == 0) throw new Exception("Specified array of Data objects is empty");
+         if (DataArray[0] == null) throw new Exception("First element of Data array is null");
          n = DataArray[0].numberOfBits();
          for (int i = 1; i < DataArray.length; i++)
-             if (n != DataArray[i].numberOfBits())
-                throw new Exception("Data objects in the array are supposed to have the same length (in terms of bits)");
+         {
+            if (DataArray[i] == null) throw new Exception("Element of index " + i + " in Data array is null");
+            if (n != DataArray[i].numberOfBits())
+               throw new Exception("Data objects in the array are supposed to have the same length (in terms of bits)");
+         }
       }
       catch (Exception e)
       {

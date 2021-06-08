@@ -5,7 +5,7 @@
  *
  * the current version is revisited by Charly Colombu (M2 Miage 2020-21)
  *
- * last update: June 2, 2021
+ * last update: June 8, 2021
  *
  * AM
  */
@@ -109,6 +109,26 @@ public class Memory
    public boolean isFull()
    {
       return this.n == this.capacity;
+   }
+
+   // toDataArray
+   public Data[] toDataArray()
+   {
+      if (this.isEmpty())  return null;
+      Data[] DataArray = new Data[this.n];
+
+      int i = 0;
+      int k = 0;
+      while (k < this.n && i < this.capacity)
+      {
+         if (this.data[i] != null)
+         {
+            DataArray[k] = new Data(this.data[i]);
+            k++;
+         }
+         i++;
+      }
+      return DataArray;
    }
 
    // contains
@@ -667,6 +687,30 @@ public class Memory
 
             // isFull
             if (M.isFull()) throw new Exception("public boolean isFull()");
+
+            // toDataArray
+            Data[] DataArray = M.toDataArray();
+            if (DataArray != null) throw new Exception("public Data[] toDataArray()");
+
+            // manually enter two Data objects with value (no extra parameters)
+            M.data[0] = new Data(10,0.5);
+            M.data[capacity-1] = new Data(12,0.4);
+            M.value[0] = R.nextDouble();
+            M.value[capacity-1] = R.nextDouble();
+            M.n = M.n + 2;
+
+            // toDataArray
+            DataArray = M.toDataArray();
+            if (DataArray == null) throw new Exception("public Data[] toDataArray()");
+
+            // isFull
+            if (capacity != 2 && M.isFull()) throw new Exception("public boolean isFull()");
+
+            // isEmpty
+            if (M.isEmpty()) throw new Exception("public boolean isEmpty()");
+
+            // numberOfEntries
+            if (M.numberOfEntries() != 2) throw new Exception("public int numberOfEntries()");
          }
          catch (Exception e)
          {
