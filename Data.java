@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: June 8, 2021
+ * last update: June 23, 2021
  *
  * AM
  */
@@ -533,6 +533,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          this.spiral = null;
       }
 
+      // getCurrentIndex
+      public Integer getCurrentIndex()
+      {
+         if (this.bitPointer < 0)  return null;
+         if (this.bitPointer >= this.data.numberOfBits())  return null;
+         return this.bitPointer;
+      }
+
       @Override
       // hasNext
       public boolean hasNext()
@@ -642,6 +650,78 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          }
          return this.spiral;
       }
+   }
+
+   // Generates the next Data object in a given neighbourhood of 'this' with a given Hamming radius
+   // -> the Hamming radius is specified by the number of elements in the input list (the only argument)
+   // -> to compute the first Data object in the neighbourhood, all elements in the input list need to be null
+   // -> to compute all next Data objects, the generated list needs to be passed in argument to the method
+   //   (the list of bitIterator objects is updated every time a new object is computed)
+   // -> when the next Data object does not exist, the method returns null 
+   public Data next(List<bitIterator> iterators)
+   {
+      int n = 0;
+      int nNull = 0;
+      try
+      {
+         if (iterators == null) throw new Exception("Input list is null");
+         n = iterators.size();
+         if (n == 0) throw new Exception("Input list is empty");
+         if (this.numberOfBits() < n) throw new Exception("Too many elements in input list; total number of bits exceeded");
+         for (bitIterator it : iterators)  if (it == null)  nNull++;
+         if (nNull != 0 && nNull != n) 
+            throw new Exception("Error in input list: the elements must either be all null, or be all defined");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // first Data object in the neighbourhood?
+      if (nNull == n)
+      {
+         Data nextD = this;
+         for (int i = 0; i < n; i++)
+         {
+            bitIterator it = new bitIterator(nextD);
+            for (int k = 0; k < i; k++)  it.next();
+            nextD = it.withNextBitFlipped();
+            iterators.set(i,it);
+         }
+         return new Data(nextD);
+      }
+
+      // computing next Data object in the neighbourhood
+      for (int i = n - 1; i >= 0; i--)
+      {
+         bitIterator it = iterators.get(i);
+         if (it.hasNext())
+         {
+            Data nextD = it.withNextBitFlipped();
+            int current = it.getCurrentIndex();
+            for (int j = i + 1; j < n && nextD != null; j++)
+            {
+               int k = 0;
+               bitIterator itj = new bitIterator(nextD);
+               for (; k <= current && itj.hasNext(); k++)  itj.next();
+               if (itj.hasNext())
+               {
+                  nextD = itj.withNextBitFlipped();
+                  iterators.set(j,itj);
+                  current++;
+               }
+               else
+               {
+                  nextD = null;
+               }
+            }
+            if (nextD != null)  return nextD;
+         }
+      }
+
+      // no more Data objects in the neighbourhood
+      return null;
    }
 
    /* static methods for the generation of more complex Data objects */
@@ -978,6 +1058,56 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       }  
       
       return this.hammingDistanceTo(D) <= h;
+   }
+
+   // Gives the number of Data object in the circle centered on 'this' and having Hamming radius h
+   public int numberOfDataOnCircle(int h)
+   {
+      try
+      {
+         String msg = "Impossible to count the number of Data objects on Hamming circle: specified Hamming distance ";
+         if (h < 0) throw new Exception(msg + "is negative");
+         if (h > this.numberOfBits()) throw new Exception(msg + "is strictly larger than the total number of bits");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // computing the binomial
+      return Data.binomial(h,this.numberOfBits());
+   }
+
+   // Gives the number of Data objects in the neighbourhood of 'this' and Hamming distance between l and u
+   public int numberOfDataInNeighbourhood(int l,int u)
+   {
+      try
+      {
+         int n = this.numberOfBits();
+         String msg = "Impossible to count the number of Data objects on Hamming neighbourhood: ";
+         if (l < 0) throw new Exception(msg + "specified lower bound is nonpositive");
+         if (l > n) throw new Exception(msg + "specified lower bound is larger than total number of bits");
+         if (u < 0) throw new Exception(msg + "specified upper bound is nonpositive");
+         if (u > n) throw new Exception(msg + "specified upper bound is larger than total number of bits");
+         if (l > u) throw new Exception(msg + "specified lower bound is strictly larger than upper bound");
+      }
+      catch (Exception e)
+      {  
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // summing up the number of Data objects in every Hamming circle
+      int n = 0;
+      for (int i = l; i <= u; i++)  n = n + this.numberOfDataOnCircle(i);
+      return n;
+   }
+
+   // Gives the number of Data objects in the neighbourhood of 'this' and Hamming distance between 0 and u
+   public int numberOfDataInNeighbourhood(int h)
+   {
+      return this.numberOfDataInNeighbourhood(0,h);
    }
 
    // Selects a random Data object in the neighbourhood with Hamming distance [l,u] from this Data object
@@ -1761,6 +1891,17 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return print + "] (" + this.numberOfBits() + ";" + this.numberOfBytes() + ")";
    }
 
+   // binomial calculation (private and static, no argument verification)
+   private static int binomial(int k,int n)
+   {
+      // easy cases
+      if (k > n)  return 0;
+      if (k == 0 || k == n)  return 1;
+ 
+      // recurrency
+      return Data.binomial(k-1,n-1) + Data.binomial(k,n-1);
+   }
+
    // main (performing tests)
    public static void main(String[] args)
    {
@@ -2155,7 +2296,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       }
       System.out.println("OK");
 
-      // bitIterator
+      // bitIterator (and Data method "next")
       System.out.print("Testing bitIterator ... ");
       for (int itest = 0; itest < NTESTS; itest++)
       {
@@ -2168,14 +2309,17 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             bitIterator It = D.iterator();
             if (!It.hasNext()) throw E;
             if (It.hasPrevious()) throw E;
+            if (It.getCurrentIndex() != null) throw E;
             Integer bit = It.next();
             if (bit != D.getBit(0)) throw E;
+            if (It.getCurrentIndex() != 0) throw E;
             int i = 1;
             while (It.hasNext())
             {
                if (It.next() != D.getBit(i)) throw E;
                i++;
             }
+            if (It.getCurrentIndex() != n - 1) throw E;
             i--;
             while (It.hasPrevious())
             {
@@ -2261,6 +2405,26 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                for (int i = 2*h; i < 2*m + 3; i++)  if (It.hasNextOnSpiral())  It.nextOnSpiral();
                if (It.hasNextOnSpiral()) throw E;
             }
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         // Data method "next" (here, only verification of the first generated Data object)
+         try
+         {
+            int n = min + min + R.nextInt(max - min - min);
+            int m = 1 + R.nextInt(n - 1);
+            Data D = new Data(n,0.5);
+            List<bitIterator> list = new ArrayList<bitIterator>(m);
+            for (int i = 0; i < m; i++)  list.add(null);
+            Data nextD = D.next(list);
+            Exception F = new Exception("public Data next(List<bitIterator>)");
+            if (nextD == null) throw F;
+            if (!nextD.check_invariants()) throw F;
+            for (int i = 0; i < m; i++)  if (D.getBit(i) == nextD.getBit(i)) throw F;
          }
          catch (Exception e)
          {
@@ -2638,6 +2802,32 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             System.exit(1);
          }
 
+         // public int numberOfData/OnCircle/InNeighbourhood(?,int)
+         try
+         {
+            Exception E1 = new Exception("public int numberOfDataOnCircle(int)");
+            Exception E2 = new Exception("public int numberOfDataInNeighbourhood(?,int)");
+
+            // generating and trying out some known cases
+            int n = min + R.nextInt(max - min);
+            Data D = new Data(n,0.5);
+            if (D.numberOfDataOnCircle(0) != 1) throw E1;
+            if (D.numberOfDataOnCircle(1) != n) throw E1;
+            if (R.nextInt(6) == 0)  // because it's a slow computation
+            {
+               int value = 1;
+               n = min + R.nextInt(10 - min);
+               D = new Data(n,0.5);
+               for (int i = 0; i < n; i++)  value = value << 1;
+               if (D.numberOfDataInNeighbourhood(n) != value) throw E2;
+            }
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
          // public Data randomSelectInNeighbourhood(?,int)
          try
          {
@@ -2703,27 +2893,53 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          try
          {
             // public static Data randomSelectAtDistanceFrom(int,Data[])
-            int n = min + R.nextInt(max - min);
+            int n = min + min + R.nextInt(max - min - min);
             int m = min + R.nextInt(n);
             Data df = new Data(n,false);
             Data[] array = new Data[m];
+            Set<Integer> ones = new TreeSet<Integer> ();
+            ones.add(0);
+            ones.add(1);
+            Data mask = new Data(Data.shuffle(new Data(n,ones)),true);
             for (int i = 0; i < m; i++)
             {
-               array[i] = new Data(n,0.2 + 0.4*R.nextDouble());
+               array[i] = new Data(new Data(n,0.3),mask,"and");  // at least 2 bits equal to 0 in the final 'df'
                df = new Data(df,array[i],"or");
             }
             int k = df.numberOfZeros();
-            if (k > 0)
-            {
-               int h = 1;
-               if (k > 1)  h = 1 + R.nextInt(k-1);
-               Data F = Data.randomSelectAtDistanceFrom(h,array);
-               Exception E = new Exception("public static Data randomSelectAtDistanceFrom(int,Data[])");
-               if (F == null) throw E;
-               if (!F.check_invariants()) throw E;
-               if (F.numberOfBits() != n) throw E;
-               for (int i = 0; i < m; i++)  if (F.hammingDistanceTo(array[i]) < h) throw E;
+            int h = 1;
+            h = 1 + R.nextInt(k-1);
+            Data F = Data.randomSelectAtDistanceFrom(h,array);
+            Exception E = new Exception("public static Data randomSelectAtDistanceFrom(int,Data[])");
+            if (F == null) throw E;
+            if (!F.check_invariants()) throw E;
+            if (F.numberOfBits() != n) throw E;
+            for (int i = 0; i < m; i++)  if (F.hammingDistanceTo(array[i]) < h) throw E;
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+
+         try
+         {
+            // Data method "next" and count of number of Data objects in a given Hamming circle
+            int n = 3*min + R.nextInt(max - 3*min);
+            int m = 1;
+            if (n < max/4)  if (R.nextBoolean())  m = 1 + R.nextInt(3);
+            Data D = new Data(n,0.5);
+            Exception E = new Exception("public Data next(List<bitIterator>)");
+            ArrayList<bitIterator> list = new ArrayList<bitIterator> (m);
+            for (int i = 0; i < m; i++)  list.add(null);
+            Data nextD = null;
+            int count = -1;
+            do {
+               count++;
+               nextD = D.next(list);
             }
+            while (nextD != null);
+            if (count != D.numberOfDataOnCircle(m)) throw E;
          }
          catch (Exception e)
          {

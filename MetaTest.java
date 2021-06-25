@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 20, 2021
+ * last update: June 25, 2021
  *
  * AM
  */
@@ -15,9 +15,9 @@ public class MetaTest
    // test parameters
    static boolean LaTex = true;
    static int TIMEMAX = 1000;  // max time for meta-heuristic methods
-   static String [] objectives = {"BitCounter","ColorPartition","Pi","Fermat","SubsetSum","NumberPartition","Knapsack","WolfSearch"};
+   static String [] objectives = {"BitCounter","ColorPartition","Pi","Fermat","SubsetSum","NumberPartition","Knapsack","VariableNeighbourhoodSearch"};
    static String [] instances = {"instance01","instance02","instance03"};
-   static String [] methods = {"LocalOpt","RandomWalk","WolfSearch"}; 
+   static String [] methods = {"LocalOpt","RandomWalk","WolfSearch","VariableNeighbourhoodSearch"}; 
 
    // Main
    public static void main(String[] args)
@@ -88,6 +88,8 @@ public class MetaTest
                   mh = new RandomWalk(D,current,TIMEMAX);
                else if (methods[imeth].equals("WolfSearch"))
                   mh = new WolfSearch(current,100,100,2,(int) Math.floor(0.7*size),0.1,0.4,TIMEMAX);
+               else if (methods[imeth].equals("VariableNeighbourhoodSearch"))
+                  mh = new VariableNeighbourhoodSearch(D,current,100,TIMEMAX);
                else
                {
                   System.out.println("Unknown meta-heuristic search " + methods[imeth]);

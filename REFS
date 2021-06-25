@@ -1,5 +1,5 @@
 
-REFERENCES
+MAIN REFERENCES
 
 About binMeta.
 
@@ -9,12 +9,18 @@ About binMeta.
 
 About the implemented meta-heuristic searches.
 
-WOLF SEARCH (initial commit on Dec 13, 2020)
+WOLF SEARCH (initial commit on December 13, 2020)
 
 1. R. Tang, S. Fong, X.S. Yang, S. Deb,
    Wolf Search Algorithm with Ephemeral Memory,
-   IEEE Proceedings, 7^th International Conference on Digital Information Management (ICDIM 2012),
+   IEEE Proceedings, 7th International Conference on Digital Information Management (ICDIM 2012),
    Macau, 165-172, 2012.
 
-last update: May 29, 2021.
+VARIABLE NEIGHBOURHOOD SEARCH (initial commit on June 25, 2021)
+
+2. N. Mladenović, P. Hansen, 
+   Variable neighborhood search, 
+   Computers & Operations Research 24(11), 1097-1100, 1997.
+
+last update: June 25, 2021.
 

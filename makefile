@@ -3,9 +3,11 @@
 
 all: Data.jar Objectives.jar Memory.class MetaHeuristics.jar MetaTest.class
 
-objs=Objective.class BitCounter.class ColorPartition.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class
+objs=Objective.class BitCounter.class ColorPartition.class Pi.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class
 
-methods=binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class
+methods=binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class VariableNeighbourhoodSearch.class
+
+###
 
 binMeta.class: binMeta.java Data.jar Objectives.jar
 	javac -cp .:Data.jar:Objectives.jar binMeta.java
@@ -48,11 +50,17 @@ Objectives.jar: $(objs)
 Objective.class: Objective.java Data.jar
 	javac -cp .:Data.jar Objective.java
 
+Pi.class: Pi.java Objective.class Data.jar
+	javac -cp .:Data.jar Pi.java
+
 RandomWalk.class: RandomWalk.java Data.jar Objectives.jar binMeta.class
 	javac -cp .:Data.jar:Objectives.jar RandomWalk.java
 
 SubsetSum.class: SubsetSum.java Objective.class Data.jar
 	javac -cp .:Data.jar SubsetSum.java 
+
+VariableNeighbourhoodSearch.class: VariableNeighbourhoodSearch.java Data.jar Objectives.jar binMeta.class LocalOpt.class
+	javac -cp .:Data.jar:Objectives.jar VariableNeighbourhoodSearch.java
 
 WolfSearch.class: WolfSearch.java Data.jar Objectives.jar binMeta.class LocalOpt.class
 	javac -cp .:Data.jar:Objectives.jar WolfSearch.java
