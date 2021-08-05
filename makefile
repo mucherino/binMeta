@@ -5,7 +5,7 @@ all: Data.jar Objectives.jar Memory.class MetaHeuristics.jar MetaTest.class
 
 objs=Objective.class BitCounter.class ColorPartition.class Pi.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class
 
-methods=binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class VariableNeighbourhoodSearch.class
+methods=binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class VariableNeighbourhoodSearch.class MultiStart.class
 
 ###
 
@@ -41,6 +41,9 @@ MetaHeuristics.jar: Data.jar Memory.class Objectives.jar $(methods)
 MetaTest.class: MetaTest.java Data.jar Memory.class Objectives.jar MetaHeuristics.jar
 	javac -cp .:Data.jar:Objectives.jar:MetaHeuristics.jar MetaTest.java
 
+MultiStart.class: MultiStart.java Data.jar Objectives.jar binMeta.class LocalOpt.class
+	javac -cp .:Data.jar:Objectives.jar MultiStart.java
+
 NumberPartition.class: NumberPartition.java Objective.class Data.jar
 	javac -cp .:Data.jar NumberPartition.java
 
@@ -65,7 +68,7 @@ VariableNeighbourhoodSearch.class: VariableNeighbourhoodSearch.java Data.jar Obj
 WolfSearch.class: WolfSearch.java Data.jar Objectives.jar binMeta.class LocalOpt.class
 	javac -cp .:Data.jar:Objectives.jar WolfSearch.java
 
-pclean:
+light:
 	\rm -f $(objs) $(methods)
 
 clean:

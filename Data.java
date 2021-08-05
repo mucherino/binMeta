@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: June 23, 2021
+ * last update: June 30, 2021
  *
  * AM
  */
@@ -51,14 +51,15 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Data constructor: it generates a random Data object consisting of n bits, 
-   //                   and with probability p in [0,1] to have bits equal to 1
-   public Data(int n,double p)
+   //                   and with probability p in [0,1] to have bits equal to 1;
+   //                   it takes in entry a Random object to perform random choices
+   public Data(int n,Random R,double p)
    {
       try
       {
          if (n <= 0) throw new Exception("Specified size for Data object is nonpositive");
+         if (R == null) throw new Exception("Input Random object is null");
          if (p < 0.0 || p > 1.0) throw new Exception("Specified probability p should be contained in the interval [0,1]");
-         Random R = new Random();
 
          // randomly choosing the bits to be set to 1
          boolean [] bits = new boolean [n];
@@ -101,6 +102,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          e.printStackTrace();
          System.exit(1);
       }
+   }
+
+   // Data constructor: it generates a random Data object consisting of n bits, 
+   //                   and with probability p in [0,1] to have bits equal to 1;
+   //                   the Random object for the random choices is internally instantiated
+   public Data(int n,double p)
+   {
+      this(n,new Random(),p);
    }
 
    // Data constructor: it generates a new Data object by setting at 1 all bits indicated in input Set object

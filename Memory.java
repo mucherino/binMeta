@@ -3,16 +3,14 @@
  *
  * binMeta project
  *
- * the current version is revisited by Charly Colombu (M2 Miage 2020-21)
+ * the current version was partially revisited by Charly Colombu (M2 Miage 2020-21)
  *
- * last update: June 8, 2021
+ * last update: June 30, 2021
  *
  * AM
  */
 
 import java.util.ArrayList;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 import java.util.Random;
 
 public class Memory
@@ -45,21 +43,26 @@ public class Memory
          if (method == null) throw new Exception("String containing method for 'victim' selection is null");
          if (method.length() == 0) throw new Exception("String containing method for 'victim' selection is empty");
          this.method = "FIFO";
-         if (!method.equalsIgnoreCase("FIFO"))
+         if (!method.equalsIgnoreCase("FIFO"))  // First-In First-Out
          {
-            if (method.equalsIgnoreCase("LRU"))
+            if (method.equalsIgnoreCase("LRU"))  // Least Recently Used
                this.method = "LRU";
+            else if (method.equalsIgnoreCase("WO"))  // Worst-Out
+               this.method = "WO";
             else throw new Exception("Unknown method for 'victim' selection : " + method);
          }
+         if (this.method.equals("FIFO") || this.method.equals("LRU"))  this.nIntParam = 1;  // contains either load time or access time
          if (nExtraParam < 0) throw new Exception("Specified number of extra parameters for Memory object is negative");
-         this.nIntParam = 1;  // is currently used for either load time or access time
          this.nExtParam = nExtraParam;
          this.param = null;
-         this.param = new Object[this.capacity][this.nIntParam + this.nExtParam];
-         if (this.param == null) throw new Exception("Not enough memory resources for Memory object");
-         for (int i = 0; i < this.capacity; i++)
+         if (this.nIntParam + this.nExtParam > 0)
          {
-            for (int j = 0; j < this.nIntParam + this.nExtParam; j++)  this.param[i][j] = null;
+            this.param = new Object[this.capacity][this.nIntParam + this.nExtParam];
+            if (this.param == null) throw new Exception("Not enough memory resources for Memory object");
+            for (int i = 0; i < this.capacity; i++)
+            {
+               for (int j = 0; j < this.nIntParam + this.nExtParam; j++)  this.param[i][j] = null;
+            }
          }
       }
       catch (Exception e)
@@ -189,10 +192,11 @@ public class Memory
    // add
    // -> the returning value is the assigned index in the Memory object
    // -> if the Data object is already contained in the memory, only the associated value is updated
-   // -> FIFO or LRU strategies are applied when memory is full (defined in constructor)
+   // -> FIFO, LRU or WO strategies are applied when memory is full (defined in constructor)
+   // -> the method returns -1 if an internal error occurred
    public int add(Data data,double value)
    {
-      int pos = 0;
+      int pos = -1;
       try
       {
          // verification of input Data object
@@ -210,6 +214,7 @@ public class Memory
          if (!this.isFull())
          {
             // looking for an "empty" place
+            pos = 0;
             while (pos < this.capacity && this.data[pos] != null)  pos++;
             if (pos == this.capacity) throw new Exception("Memory: internal error");
             this.n++;
@@ -221,9 +226,13 @@ public class Memory
             {
                pos = this.indexOfOldest();
             }
-            else // LRU
+            else if (this.method.equals("LRU"))
             {
                pos = this.indexOfUseless();
+            }
+            else // WO
+            {
+               pos = this.indexOfWorst();
             }
          }
          this.checkIndex(pos);
@@ -237,7 +246,8 @@ public class Memory
       // including the new data in Memory
       this.data[pos] = new Data(data);
       this.value[pos] = value;
-      this.param[pos][0] = System.currentTimeMillis();  // valid for both FIFO and LRU methods
+      if (this.method.equals("FIFO") || this.method.equals("LRU"))
+         this.param[pos][0] = System.currentTimeMillis();  // valid for both FIFO and LRU methods
       if (this.nExtParam > 0)  for (int j = 1; j < this.nExtParam; j++)  this.param[pos][this.nIntParam + j] = null;
 
       // the returning value is the index in Memory where the new Data entry was included
@@ -308,18 +318,19 @@ public class Memory
          {
             this.data[j] = this.data[i];
             this.value[j] = this.value[i];
-            this.param[j] = this.param[i];
+            if (this.param != null)  this.param[j] = this.param[i];
          }
          this.data[i] = data;
          this.value[i] = value;
+         if (this.method.equals("LRU"))  this.param[i][0] = System.currentTimeMillis();
       }
       else
       {
          // the Data object is not in the Memory; updating the entry
          this.data[i] = data;
          this.value[i] = value;
+         if (this.method.equals("FIFO"))  this.param[i][0] = System.currentTimeMillis();
       }
-      if (this.method.equals("LRU"))  this.param[i][0] = System.currentTimeMillis();
    }
 
    // set
@@ -338,7 +349,7 @@ public class Memory
          this.n--;
          this.data[i] = null;
          this.value[i] = null;
-         this.param[i][0] = 0;
+         if (this.method.equals("FIFO") || this.method.equals("LRU"))  this.param[i][0] = null;
          if (this.nExtParam > 0)  for (int j = 0; j < this.nExtParam; j++)  this.param[i][this.nIntParam + j] = null;
          removed = true;
       }
@@ -421,9 +432,12 @@ public class Memory
          this.data[i] = this.data[j];
          this.value[i] = this.value[j];
          this.data[j] = null;  this.value[j] = null;
-         Object [] tmp = this.param[i];
-         this.param[i] = this.param[j];
-         this.param[j] = tmp;
+         if (this.param != null)
+         {
+            Object [] tmp = this.param[i];
+            this.param[i] = this.param[j];
+            this.param[j] = tmp;
+         }
          i++;  while (i < j && this.data[i] != null)  i++;
          j--;  while (i < j && this.data[j] == null)  j--;
       }
@@ -565,6 +579,7 @@ public class Memory
    {
       try
       {
+         if (this.nExtParam <= 0) throw new Exception("No extra parameters in this Memory object");
          if (j < 0 || j >= this.nExtParam) throw new Exception("Extra paramater index out of bounds");
       }
       catch (Exception e)
@@ -572,7 +587,6 @@ public class Memory
          e.printStackTrace();
          System.exit(1);
       }
-
       return true;
    }
 
@@ -652,16 +666,16 @@ public class Memory
             // constructors
             Memory M = null;
             Exception E = null;
-            String[] methods = {"fifo","lru"};
+            String[] methods = {"fifo","lru","wo"};
             int rand = R.nextInt(4);
             if (rand == 0)
             {
-               M = new Memory(capacity,methods[R.nextInt(2)],nextra);
+               M = new Memory(capacity,methods[R.nextInt(3)],nextra);
                E = new Exception("public Memory(int,String,int)");
             }
             else if (rand == 1)
             {
-               M = new Memory(capacity,methods[R.nextInt(2)]);
+               M = new Memory(capacity,methods[R.nextInt(3)]);
                E = new Exception("public Memory(int,String)");
             }
             else if (rand == 2)
@@ -744,8 +758,14 @@ public class Memory
             int n = min + R.nextInt(max - min);
             for (int i = 0; i < n; i++)
             {
-               Data D = new Data(15,R.nextDouble());
-               if (!M.isEmpty())  while (M.contains(D))  D = new Data(15,R.nextDouble());
+               Data D = new Data(15,R,R.nextDouble());
+               if (!M.isEmpty())
+               {
+                  while (M.contains(D))
+                  {
+                     D = new Data(15,R,R.nextDouble());
+                  }
+               }
                double value = R.nextDouble();
                if (M.contains(D)) throw E4;
                int k = M.add(D,value);
@@ -768,7 +788,7 @@ public class Memory
             }
 
             // filling up Memory object
-            while (!M.isFull())  M.add(new Data(10,0.5),R.nextDouble());
+            while (!M.isFull())  M.add(new Data(10,R,0.5),R.nextDouble());
 
             // more verifications
             if (M.isEmpty()) throw E1;
@@ -785,8 +805,8 @@ public class Memory
                if (M.getValue(0) != 1.0) throw E1;
             }
 
-            // adding more than capacity
-            while (M.contains(D))  D = new Data(15,0.5);
+            // trying to add more than capacity
+            while (M.contains(D))  D = new Data(15,R,0.5);
             int nentries = M.numberOfEntries();
             M.add(D,R.nextDouble());
             if (nentries != M.numberOfEntries()) throw E1;
@@ -796,7 +816,7 @@ public class Memory
             int h = R.nextInt(capacity);
             D = M.getData(h);
             if (M.indexOf(D) != h) throw E5;
-            while (M.contains(D))  D = new Data(15,R.nextDouble());
+            while (M.contains(D))  D = new Data(15,R,R.nextDouble());
             M.set(h,D,0.0);
             if (M.indexOf(D) != h) throw E6;
             if (!M.getData(h).equals(D)) throw E6;
@@ -806,7 +826,7 @@ public class Memory
             if (M.contains(D)) throw E7;
             if (M.indexOf(D) != -1) throw E7;
             if (M.isFull()) throw E7;
-            while (M.contains(D))  D = new Data(15,0.5);
+            while (M.contains(D))  D = new Data(15,R,0.5);
             M.add(D);
             if (!M.isFull()) throw E1;
             if (!M.contains(D)) throw E1;
@@ -843,7 +863,7 @@ public class Memory
          {
             // random arguments
             int capacity = min + R.nextInt(max - min);
-            Memory M = new Memory(capacity,"LRU");
+            Memory M = new Memory(capacity,"WO");
 
             // filling up the memory while checking the random double values
             Data Best = null;
@@ -874,6 +894,10 @@ public class Memory
             M.checkIndex(j);
             if (!M.getData(j).equals(Best) || M.getValue(j) != best) throw new Exception("public int indexOfBest");
             if (!Best.equals(Worst))  if (i == j) throw new Exception("indexOfWorst <> indexOfBest");
+            Data last = null;
+            while (last == null || M.contains(last))  last = new Data(16,0.5);
+            M.add(last,best);
+            if (M.indexOf(last) != i) throw new Exception("WO victim method");
          }
          catch (Exception e)
          {
@@ -962,7 +986,7 @@ public class Memory
          {
             // random arguments
             int capacity = min + R.nextInt(max - min);
-            Memory M = new Memory(capacity);
+            Memory M = new Memory(capacity,"Wo");
             int n1 = 1 + R.nextInt(capacity - 1);
             Objective obj = new BitCounter(capacity);
 
