@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: June 30, 2021
+ * last update: October 25, 2022
  *
  * AM
  */
@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.NoSuchElementException;
@@ -20,13 +21,14 @@ import java.math.BigInteger;
 
 public class Data implements Comparable<Data>, Iterable<Integer>
 {
-   protected int size;  // actual size (may not be a multiple of 8)
-   protected ArrayList<Byte> data;  // the data are stored as lists of bytes
+   private int size;  // actual size (may not be a multiple of 8)
+   private ArrayList<Byte> data;  // the data are stored as lists of bytes
+   private HashMap<Integer,Data> contracted;  // contracted sequences
 
    /* constructors */
 
    // Data constructor: it generates a new Data object with its n bits set to 0 or 1,
-   //                   depending on value of the boolean argument (0=false, 1=true)
+   // - depending on value of the boolean argument (0=false, 1=true)
    public Data(int n,boolean bitValue)
    {
       try
@@ -41,7 +43,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          int exb = 8 - n%8;
          if (exb != 8)  b = (byte) Data.mask_bits(bi,exb);
          this.data.add(b);
-         this.size = n; 
+         this.size = n;
+         this.contracted = null;
       }
       catch (Exception e)
       {  
@@ -50,9 +53,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       }        
    }
 
-   // Data constructor: it generates a random Data object consisting of n bits, 
-   //                   and with probability p in [0,1] to have bits equal to 1;
-   //                   it takes in entry a Random object to perform random choices
+   // Data constructor: it generates a random Data object consisting of n bits
+   // - with probability p in [0,1] to have bits equal to 1
+   // - it takes in entry a Random object to perform random choices
    public Data(int n,Random R,double p)
    {
       try
@@ -95,7 +98,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             byte b = (byte) bi;
             this.data.add(b);
          }
-         this.size = n; 
+         this.size = n;
+         this.contracted = null;
       }
       catch (Exception e)
       {
@@ -104,16 +108,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       }
    }
 
-   // Data constructor: it generates a random Data object consisting of n bits, 
-   //                   and with probability p in [0,1] to have bits equal to 1;
-   //                   the Random object for the random choices is internally instantiated
+   // Data constructor: it generates a random Data object consisting of n bits
+   // - and with probability p in [0,1] to have bits equal to 1
+   // - the Random object for the random choices is internally instantiated
    public Data(int n,double p)
    {
       this(n,new Random(),p);
    }
 
    // Data constructor: it generates a new Data object by setting at 1 all bits indicated in input Set object
-   //                   all other bits are set to 0 (bit indices out of bounds will be ignored)
+   // - all other bits are set to 0 (bit indices out of bounds will be ignored)
    public Data(int n,Set<Integer> ones)
    {
       try
@@ -137,6 +141,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             this.data.add(b);
          }
          this.size = n;
+         this.contracted = null;
       }
       catch (Exception e)
       {
@@ -152,8 +157,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       try
       {
          if (D == null) throw new Exception("Input Data object is null");
+         this.size = D.size;
          int nbytes = D.numberOfBytes();
-         this.size = D.numberOfBits();
          this.data = new ArrayList<Byte> (nbytes);
          for (int k = 0; k < nbytes; k++)
          {
@@ -171,6 +176,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             }
             this.data.add(b);
          }
+         this.contracted = null;
+         if (D.containsContractedSequences())
+         {
+            this.contracted = new HashMap<Integer,Data> ();
+            for (Integer f : D.contracted.keySet())  this.contracted.put(f,new Data(D.contracted.get(f)));
+         }
       }
       catch (Exception e)
       {
@@ -186,7 +197,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Data constructor: it generates a new Data object consisting of the bit sequence specified in a String object
-   //                   (method proposed by Manu Lagadec, M1 Info 2020-21)
+   // (method proposed by Manu Lagadec, M1 Info 2020-21)
    public Data(String s)
    {
       try
@@ -224,6 +235,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             byte b = (byte) bi;
             this.data.add(b);
          }
+         this.contracted = null;
       }
       catch (Exception e)
       {
@@ -233,6 +245,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Data constructor: it generates a new Data object by concatenating two Data objects
+   // - the operation also includes contracted sequences
    public Data(Data D1,Data D2)
    {
       try
@@ -241,7 +254,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          if (D2 == null) throw new Exception("Second Data object is null");
 
          // setting up main attributes
-         this.size = D1.numberOfBits() + D2.numberOfBits();
+         this.size = D1.size + D2.size;
          int N = 1 + (this.size - 1)/8;
          this.data = new ArrayList<Byte> (N);
 
@@ -282,6 +295,27 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                this.data.add(b);
             }
          }
+
+         // concatenating the two lists of contracted bit sequences
+         this.contracted = null;
+         if (D1.containsContractedSequences() || D2.containsContractedSequences())
+            this.contracted = new HashMap<Integer,Data> ();
+         if (D1.containsContractedSequences())
+         {
+            for (Integer f : D1.contracted.keySet())
+            {
+               Data C = new Data(D1.contracted.get(f));
+               this.contracted.put(f,C);
+            }
+         }
+         if (D2.containsContractedSequences())
+         {
+            for (Integer f : D2.contracted.keySet())
+            {
+               Data C = new Data(D2.contracted.get(f));
+               this.contracted.put(D1.numberOfBits() + f,C);
+            }
+         }
       }
       catch (Exception e)
       {
@@ -291,7 +325,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Data constructor: it generates a new Data object by extracting a specific subsequence of bits from an existing Data object
-   //                   the first specified bit is included; the last specified bit is not included
+   // - the first specified bit is included; the last specified bit is not included
+   // - the operation also includes contracted sequences
    public Data(Data D,int first,int last)
    {
       try
@@ -305,6 +340,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             throw new Exception("Specified last bit index " + last + " is out of range: [0," + D.numberOfBits() + ")");
          if (last <= first) throw new Exception("Specified first bit index needs to be strictly smaller than specified last bit index");
 
+         // main data
          this.size = last - first;
          int N = 1 + (this.size - 1)/8;
          this.data = new ArrayList<Byte> (N);
@@ -325,6 +361,19 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             byte b = (byte) bi;
             this.data.add(b);
          }
+
+         // contracted bits
+         this.contracted = null;
+         if (D.contracted != null)
+         {
+            this.contracted = new HashMap<Integer,Data> ();
+            for (Integer f : D.contracted.keySet())
+            {
+               Data C = new Data(D.contracted.get(f));
+               if (f >= first && f < last)  this.contracted.put(f - first,C);
+            }
+            if (this.contracted.size() == 0)  this.contracted = null;
+         }
       }
       catch (Exception e)
       {
@@ -334,22 +383,27 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Data constructor: it generates a new Data object by combining two Data objects having the same size by applying 
-   //                   one of the following bitwise operators: and, or, xor.
+   // - one of the following bitwise operators: and, or, xor.
+   // - only one of the two input Data objects can contain contracted sequences, which are inherited by the constructed object
    public Data(Data D1,Data D2,String op)
    {
       try
       {
          if (D1 == null) throw new Exception("First Data object is null");
          if (D2 == null) throw new Exception("Second Data object is null");
+         if (D1.containsContractedSequences() && D2.containsContractedSequences())
+            throw new Exception("Only one of the two input Data objects can contain contracted bit sequences");
          if (op == null) throw new Exception("The String supposed to contain the bitwise operation is null");
          if (D1.numberOfBits() != D2.numberOfBits()) throw new Exception("The two Data objects have different size (in terms of bits)");
          if (!op.equalsIgnoreCase("and") && !op.equalsIgnoreCase("or") && !op.equalsIgnoreCase("xor"))
             throw new Exception("Unknown bitwise operation: \"" + op + "\""); 
 
+         // getting started
+         this.size = D1.size;
          int N = D1.numberOfBytes();
          this.data = new ArrayList<Byte> (N);
-         this.size = D1.numberOfBits();
 
+         // performing logic operation
          if (op.equalsIgnoreCase("and"))  // and
          {
             for (int k = 0; k < N; k++)
@@ -379,6 +433,11 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                this.data.add((byte) b);
             }
          }
+
+         // taking care of possible contracted sequences
+         this.contracted = null;
+         if (D1.containsContractedSequences())  this.contracted = new HashMap<Integer,Data> (D1.contracted);
+         if (D2.containsContractedSequences())  this.contracted = new HashMap<Integer,Data> (D2.contracted);
       }
       catch (Exception e)
       {
@@ -388,7 +447,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Data constructor: it generates a new Data object from an array of bytes
-   //                   n indicates the actual number of bits (does not need to be a multiply of 8)
+   // - n indicates the actual number of bits (does not need to be a multiply of 8)
    public Data(int n,byte[] bytes)
    {
       try
@@ -406,6 +465,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          if (exb != 8)  b = (byte) Data.mask_bits((int) b,exb);
          this.data.add(b);
          this.size = n;
+         this.contracted = null;
       }
       catch (Exception e)
       {
@@ -428,8 +488,50 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return this.size;
    }
 
+   // Verifies whether the Data object contains contracted bit sequences
+   public boolean containsContractedSequences()
+   {
+      return this.contracted != null && this.contracted.size() > 0;
+   }
+
+   // Verifies whether the bit specified in input is contracted or not
+   public boolean isBitContracted(int k)
+   {
+      try
+      {
+         if (k < 0 || k > this.numberOfBits()) throw new Exception("Bit index is out of range");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      if (!this.containsContractedSequences())  return false;
+      return this.contracted.containsKey(k);
+   }
+
+   // Gives the actual length of the Data object (it also counts the bits in contracted sequences)
+   public int length()
+   {  
+      int l = this.size;
+
+      // are there any contracted bit sequences?
+      if (this.containsContractedSequences())
+      {
+         for (Integer f : this.contracted.keySet())
+         {
+            Data C = this.contracted.get(f);
+            l = l - 1 + C.length();
+         }
+      }
+
+      // normally we counted all bits
+      return l;
+   }
+
    // Gives the specified bit 
-   // (private method, it doesnt verify if the bit and byte indices are correct)
+   // - private method, it doesnt verify if the bit and byte indices are correct
    private int getBit(int i,int j)
    {
       byte b = (byte) this.data.get(i);
@@ -437,7 +539,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Gives the specified bit
-   // (private method, it doesnt verify if the bit index is correct)
+   // - private method, it doesnt verify if the bit index is correct
    private int getBit(int k)
    {
       int i = k/8;
@@ -446,7 +548,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Flips the specified bit
-   // (private method, it doesnt verify if the bit and byte indices are correct)
+   // - private method, it doesnt verify if the bit and byte indices are correct
    private void flipBit(int i,int j)
    {
       byte x = (byte) (1 << (7 - j));
@@ -455,13 +557,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Flips the specified bit
-   // (private method, it doesnt verify if the bit index is correct)
+   // - private method, it doesnt verify if the bit index is correct
    private void flipBit(int k)
    {
       this.flipBit(k/8,k%8);
    }
 
    // Gives the number of bits equal to 0
+   // - contracted sequences not counted
    public int numberOfZeros()
    {
       int nZeros = 0;
@@ -470,6 +573,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Gives the number of bits equal to 1
+   // - contracted sequences not counted
    public int numberOfOnes()
    {
       int nOnes = 0;
@@ -477,7 +581,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return nOnes;
    }
 
-   // Gives the number of bits equal to 0 or 1 (selected via the boolean argument)
+   // Gives the number of bits equal to 0 or 1
+   // - selected via the boolean argument
    public int numberOfBits(boolean bitValue)
    {
       int n = 0;
@@ -489,6 +594,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Creates a new array of bytes with the bytes forming the Data object
+   // - contracted bit sequences are here ignored
    public byte[] toByteArray()
    {
       byte[] byteArray = new byte [this.data.size()];
@@ -501,12 +607,102 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return byteArray;
    }
 
+   /* Data contraction methods */
+
+   // Contracts the Data object by collapsing a sequence of contiguous bits into one
+   // - when the new bit value is 0, then it corresponds to the original contracted sequence
+   // - when the new bit value is 1, then it corresponds to the flipped version of the original sequence
+   // This is the only way to mutate a Data object; it mutates its inner structure however, not its content
+   // The original sequence can be obtained via the method 'uncontract'
+   public void contract(int first,int last)
+   {
+      int n = this.numberOfBits();
+      try
+      {
+         // initial verifications
+         if (first < 0 || first > n) throw new Exception("The argument first is out of range");
+         if (last < 0 || last > n) throw new Exception("The argument last is out of range");
+         if (first >= last) throw new Exception("The argument first cannot be equal or larger than the argument last");
+         if (last == first + 1) throw new Exception("The argument last is only one unit larger than the argument first: nothing to compress");
+         if (n < last - first) throw new Exception("The range delimited by arguments first and last is too wide for this Data object");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // contracting the bit sequence from first (included) to last (excluded)
+      Data C = null;
+      if (first > 0)
+         C = new Data(new Data(this,0,first),new Data(1,false));
+      else
+         C = new Data(1,false);
+      if (last < n)
+         C = new Data(C,new Data(this,last,n));
+
+      // adding the new contracted sequence in the HashMap
+      if (C.contracted == null)  C.contracted = new HashMap<Integer,Data> ();  // may contain other contracted sequences from this
+      C.contracted.put(first,new Data(this,first,last));
+
+      // we are done
+      this.size = C.size;
+      this.data = C.data;
+      this.contracted = C.contracted;
+   }
+
+   // Uncontracts the Data object by reassembling the previously collapsed bit sequences
+   // - when the bit to be expanded is 0, the original sequence is reintroduced
+   // - when the bit to be expanded is 1, the flipped version of the original sequence is reintroduced
+   // This is the only way to mutate a Data object; it mutates its inner structure however, not its content
+   // The contracted version in input needs to have been created by (possibly several) call(s) to the 'contract' method
+   public void uncontract()
+   {
+      try
+      {
+         // initial verification
+         if (this.contracted == null) throw new Exception("The Data object in input does not contain any contracted bit sequences");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
+      // starting from the current contracted sequence
+      Data U = new Data(this);
+
+      // uncontracting
+      while (U.contracted != null)
+      {
+         ArrayList<Integer> current = new ArrayList<Integer> (U.contracted.keySet());
+         int bit = current.get(0);
+         Data sequence = U.contracted.get(bit);
+         if (sequence.containsContractedSequences())  sequence.uncontract();
+         if (U.getBit(bit) == 1)  sequence = new Data(sequence,true);
+         Data newU = null;
+         if (bit > 0)
+            newU = new Data(new Data(U,0,bit),sequence);
+         else
+            newU = sequence;
+         if (bit < U.numberOfBits() - 1)
+            newU = new Data(newU,new Data(U,bit+1,U.numberOfBits()));
+         U = newU;
+      }
+
+      // we are done
+      this.size = U.size;
+      this.data = U.data;
+      this.contracted = U.contracted;
+   }
+
    /* bitIterator 
     *
     * it allows for iterating on:
     * - the bits of the Data object (hasNext, next, hasPrevious, previous)
     * - the Data objects obtained by flipping the current bit (hasNext, withNextBitFlipped, hasPrevious, withPreviousBitFlipped)
-    * - the Data objects belong to the "spiral" around the current bit (hasNextOnSpiral, nextOnSpiral)
+    *
+    * It does not allow for iterating on contracted bit sequences
     */
 
    @Override
@@ -522,8 +718,6 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       // bitIterator attributes
       private Data data;  // reference to Data object
       private int bitPointer;  // bit pointer
-      private Integer spiPointer;  // spiral pointer
-      private Data spiral;
 
       // constructor
       public bitIterator(Data data)
@@ -531,15 +725,6 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          super();
          this.data = data;
          this.bitPointer = -1;
-         this.spiPointer = null;
-         this.spiral = null;
-      }
-
-      // spiReset (private)
-      private void spiReset()
-      {
-         this.spiPointer = null;
-         this.spiral = null;
       }
 
       // getCurrentIndex
@@ -563,7 +748,6 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       {
          if (!this.hasNext()) throw new NoSuchElementException();
          this.bitPointer++;
-         this.spiReset();
          return this.data.getBit(this.bitPointer);
       }
 
@@ -578,7 +762,6 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       {
          if (!this.hasPrevious()) throw new NoSuchElementException();
          this.bitPointer--;
-         this.spiReset();
          return this.data.getBit(this.bitPointer);
       }
 
@@ -614,51 +797,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          return D;
       }
 
-      // hasNextOnSpiral
-      // -> initial version coded by Narcisse Kouadio (M2 Miage 2020-21)
-      public boolean hasNextOnSpiral()
-      {
-         int n = this.data.numberOfBits();
-         if (n < 3)  return false;
-         if (this.bitPointer < 1 || this.bitPointer >= n - 1)  return false;
-         if (this.spiPointer != null)
-         {
-            int nextPointer = 0;
-            if (this.spiPointer < 0)
-               nextPointer = this.bitPointer - this.spiPointer + 1;
-            else
-               nextPointer = this.bitPointer - this.spiPointer;
-            if (nextPointer < 0 || nextPointer >= n)  return false;
-         }
-         return true;
-      }
-
-      // nextOnSpiral
-      // -> initial version coded by Narcisse Kouadio (M2 Miage 2020-21)
-      public Data nextOnSpiral() throws NoSuchElementException
-      {
-         int n = this.data.numberOfBits();
-         NoSuchElementException E = new NoSuchElementException("Next Data object on spiral does not exist");
-         if (n < 3) throw E;
-         if (this.bitPointer < 1 || this.bitPointer >= n - 1) throw E;
-         if (this.spiPointer == null)
-         {
-            this.spiPointer = 1;
-            this.spiral = new Data(this.data);
-            this.spiral.flipBit(this.bitPointer + this.spiPointer);
-         }
-         else
-         {
-            if (this.spiPointer > 0)
-               this.spiPointer = -this.spiPointer;
-            else
-               this.spiPointer = -this.spiPointer + 1;
-            int next = this.bitPointer + this.spiPointer;
-            if (next < 0 || next >= n) throw E;
-            this.spiral.flipBit(next);
-         }
-         return this.spiral;
-      }
+      /* initial implementations by Narcisse Kouadio (M2 Miage 2020-21) of "spiral iterator" removed */
    }
 
    // Generates the next Data object in a given neighbourhood of 'this' with a given Hamming radius
@@ -746,6 +885,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    // Generates a new Data object which is a copy of the input Data object D where the number of bits
    // having value corresponding to "bitValue" is reduced to "nbits". The value of "nbits" is supposed
    // to be in the interval [0,m], where m is the number of bits corresponding to "bitValue".
+   // - it does not act on contracted bit sequences
    public static Data control(Data D,boolean bitValue,int nbits)
    {
       int cnbits = 0;
@@ -787,8 +927,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object which is a copy of the input Data object D where the percentage of bits 
-   // equal to "bitValue" are reduced to the given percentage p (p = 0 would make all these bits disappear, 
-   // while p = 1 would keep all of them)
+   // equal to "bitValue" are reduced to the given percentage p 
+   // - p = 0 would make all these bits disappear, while p = 1 would keep all of them
+   // - it does not act on contracted bit sequences
    public static Data control(Data D,boolean bitValue,double p)
    {
       try
@@ -811,8 +952,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object from a Data object given as an argument, where:
-   // -> the bits are shifted in one of the two directions, and for the specified number of places;
-   // -> the direction of the shift is given by the sign of the integer input argument
+   // - the bits are shifted in one of the two directions, and for the specified number of places
+   // - the direction of the shift is given by the sign of the integer input argument
+   // - the current implementation is for Data object w/out contracted bit sequences
    public static Data shift(Data D,int nplaces)
    {
       // setting up direction and number of shifts
@@ -833,6 +975,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       try
       {
          if (D == null) throw new Exception("The input Data object is null");
+         if (D.containsContractedSequences()) throw new Exception("This implementation of 'shuffle' can only be applied to non-contracted Data objects");
          if (steps > D.numberOfBits()) throw new Exception("The number of shift steps is larger than the total number of bits in Data object");
       }
       catch (Exception e)
@@ -864,11 +1007,13 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object where the bits of a given Data object are shuffled
+   // - the current implementation is for Data object w/out contracted bit sequences
    public static Data shuffle(Data D)
    {
       try
       {
          if (D == null) throw new Exception("The input Data object is null");
+         if (D.containsContractedSequences()) throw new Exception("This implementation of 'shuffle' can only be applied to non-contracted Data objects");
       }
       catch (Exception e)
       {
@@ -903,7 +1048,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return result;
    }
 
-   // Concatenats a List of Data objects in one single Data object where the list order is preserved 
+   // Concatenats a List of Data objects in one single Data object where the list order is preserved
+   // - it also takes into consideration contracted bit sequences of the Data objects in the List (if any)
    public static Data concat(List<Data> lD)
    {
       try
@@ -941,7 +1087,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          if (n == 0) throw new Exception("The list of parent Data objects is empty");
          if (n < 2) throw new Exception("Cannot apply crossover operation with one parent");
          m = lD.get(0).numberOfBits();
-         for (Data D : lD)  if (m != D.numberOfBits()) throw new Exception("All Data objects are supposed to have the same size (in terms of bits)");
+         for (Data D : lD)
+         {
+            if (D == null) throw new Exception("Some Data objects in the input list are null");
+            if (D.containsContractedSequences()) throw new Exception("Impossible to perform crossover operation with objects having contracted sequences");
+            if (m != D.numberOfBits()) throw new Exception("All Data objects are supposed to have the same size (in terms of bits)");
+         }
          if (n > m) throw new Exception("Too many parents (" + n + ") for Data objects of size " + m);
       }
       catch (Exception e)
@@ -973,15 +1124,17 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a random Data object obtained by flipping some bits of the Data object D to fit with those of an Attractor
-   // -> the speed argument indicates the intensity of the attraction, in the real interval [0,1]
-   //    (lower the speed, more calls to the method are necessary to make D become identical to Attractor)
-   // -> coded by Mouhammadou Ba, Yaya Simpara, Vildan Ozturk (M2 Miage 2020-21)
+   // - the speed argument indicates the intensity of the attraction, in the real interval [0,1]
+   //   (lower the speed, more calls to the method are necessary to make D become identical to Attractor)
+   // - coded by Mouhammadou Ba, Yaya Simpara, Vildan Ozturk (M2 Miage 2020-21)
    public static Data attract(Data D,Data Attractor,double speed)
    {
       try
       {
          if (D == null) throw new Exception("First input Data object D is null");
          if (Attractor == null) throw new Exception("Second input Data object is null");
+         if (D.containsContractedSequences() || Attractor.containsContractedSequences())
+            throw new Exception("This implementation of 'attract' cannot handle Data objects with contracted bit sequences");
          if (D.numberOfBits() != Attractor.numberOfBits()) throw new Exception("The two specified input Data objects differ in bit length");
          if (speed < 0.0 || speed > 1.0)
             throw new Exception("Specified speed argument is supposed to be contained in the interval [0,1]");
@@ -1013,8 +1166,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a random Data object obtained by flipping some bits of the Data object D to be the opposite of those of a Repellent
-   // -> the speed argument indicates the intensity of the repulsion, in the real interval [0,1]
-   //    (lower the speed, more calls to the method are necessary to make D become the opposite of Repellent)
+   // - the speed argument indicates the intensity of the repulsion, in the real interval [0,1]
+   //   (lower the speed, more calls to the method are necessary to make D become the opposite of Repellent)
    public static Data repel(Data D,Data Repellent,double speed)
    {
       try
@@ -1033,12 +1186,13 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    /* Hamming-distance based methods */
 
    // Computes the Hamming distance between this Data object, and the argument Data object D
+   // - if this Data object is contracted, the uncontracted version is taken into consideration
    public int hammingDistanceTo(Data D)
    {
       try
       {
          if (D == null) throw new Exception("Impossible to compute Hamming distance: Data object D is null");
-         if (this.numberOfBits() != D.numberOfBits()) throw new Exception("Impossible to compute Hamming distance: number of bits differ");
+         if (this.length() != D.length()) throw new Exception("Impossible to compute Hamming distance: Data objects differ in length");
       }
       catch (Exception e)
       {
@@ -1046,9 +1200,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          System.exit(1);
       }
 
+      // uncontracting the Data objects (if necessary)
+      Data D1 = new Data(this);
+      Data D2 = new Data(D);
+      if (D1.containsContractedSequences())  D1.uncontract();
+      if (D2.containsContractedSequences())  D2.uncontract();
+
+      // computing Hamming distance
       int h = 0;
-      int l = this.numberOfBits();
-      for (int i = 0; i < l; i++)  if (this.getBit(i) != D.getBit(i))  h++;
+      int l = D1.numberOfBits();
+      for (int i = 0; i < l; i++)  if (D1.getBit(i) != D2.getBit(i))  h++;
       return h;
    }
 
@@ -1070,13 +1231,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Gives the number of Data object in the circle centered on 'this' and having Hamming radius h
+   // - if this Data object is contracted, the uncontracted version is taken into consideration
    public int numberOfDataOnCircle(int h)
    {
       try
       {
          String msg = "Impossible to count the number of Data objects on Hamming circle: specified Hamming distance ";
          if (h < 0) throw new Exception(msg + "is negative");
-         if (h > this.numberOfBits()) throw new Exception(msg + "is strictly larger than the total number of bits");
+         if (h > this.length()) throw new Exception(msg + "is strictly larger than the Data object length");
       }
       catch (Exception e)
       {
@@ -1085,10 +1247,11 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       }
 
       // computing the binomial
-      return Data.binomial(h,this.numberOfBits());
+      return Data.binomial(h,this.length());
    }
 
    // Gives the number of Data objects in the neighbourhood of 'this' and Hamming distance between l and u
+   // - if this Data object is contracted, the uncontracted version is taken into consideration
    public int numberOfDataInNeighbourhood(int l,int u)
    {
       try
@@ -1114,12 +1277,15 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Gives the number of Data objects in the neighbourhood of 'this' and Hamming distance between 0 and u
+   // - if this Data object is contracted, the uncontracted version is taken into consideration
    public int numberOfDataInNeighbourhood(int h)
    {
       return this.numberOfDataInNeighbourhood(0,h);
    }
 
    // Selects a random Data object in the neighbourhood with Hamming distance [l,u] from this Data object
+   // - when bits representing contracted sequences are selected, the number of original bits in the
+   //   contracted sequences are counted
    public Data randomSelectInNeighbourhood(int l,int u)
    {
       String msg = "Neighbourhood of Data object: ";
@@ -1128,8 +1294,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          if (l <= 0) throw new Exception(msg + "lower bound on Hamming distance is nonpositive");
          if (u < 0)  throw new Exception(msg + "upper bound on Hamming distance is negative");
          if (l > u)  throw new Exception(msg + "upper bound is greater than lower bound on Hamming distance");
-         if (this.numberOfBits() < l) throw new Exception(msg + "lower bound is greater than the total number of bits");
-         if (this.numberOfBits() < u) throw new Exception(msg + "upper bound is greater than the total number of bits");
+         if (this.length() < l) throw new Exception(msg + "lower bound is greater than the Data object length");
+         if (this.length() < u) throw new Exception(msg + "upper bound is greater than the Data object length");
       }
       catch (Exception e)
       {  
@@ -1137,23 +1303,52 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          System.exit(1);
       }
 
+      // computing the 'weight' of every bit
+      int [] weight = new int [this.numberOfBits()];
+      for (int i = 0; i < this.numberOfBits(); i++)  weight[i] = 1;
+      int select = -1;
+      if (this.containsContractedSequences())
+      {
+         ArrayList<Integer> keyList = new ArrayList<Integer> (this.contracted.keySet());
+         Collections.shuffle(keyList);
+         for (Integer i : keyList)
+         {
+            weight[i] = this.contracted.get(i).length();
+            if (select == -1 || weight[i] < u)  select = i;
+         }
+      }
+
+      // selecting the random Data object in the neighbourhood
       Random R = new Random();
       Data random = new Data(this);
       int len = random.numberOfBits();
-      boolean[] toFlip = new boolean[len];
-      for (int i = 0; i < len; i++)  toFlip[i] = false;
+      boolean[] flipped = new boolean[len];
+      for (int i = 0; i < len; i++)  flipped[i] = false;
       int actual = l + R.nextInt(u - l + 1);
-      for (int j = 0; j < actual; j++)
-      {  
-         int bitindex = 0;
-         do bitindex = R.nextInt(len);  while (toFlip[bitindex]);
-         random.flipBit(bitindex);
-         toFlip[bitindex] = true;
+      if (this.containsContractedSequences() && this.numberOfBits() - weight[select] >= actual)
+      {
+         random.flipBit(select);
+         flipped[select] = true;
+         actual = actual - weight[select];
       }
+      if (actual > 0)
+      {
+         if (this.numberOfBits() - 1 < actual)  actual = this.numberOfBits() - 1;
+         for (int j = 0; j < actual; j++)
+         {  
+            int bitindex = 0;
+            do bitindex = R.nextInt(len);  while (flipped[bitindex] || weight[bitindex] > 1);
+            random.flipBit(bitindex);
+            flipped[bitindex] = true;
+         }
+      }
+         
       return random;
    }
 
    // Selects a random Data object in the neighbourhood with Hamming distance h from this Data object
+   // - when bits representing contracted sequences are selected, the number of original bits in the
+   //   contracted sequences are counted
    public Data randomSelectInNeighbourhood(int h)
    {
       return this.randomSelectInNeighbourhood(1,h);
@@ -1162,14 +1357,15 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    // Selects a random Data object in the neighbourhood from this Data object with the following properties
    // 1. the Hamming distance between this and the new object is between l and u (as in previous method)
    // 2. only a selection of bit subsequences of (almost) equal length are allowed to have their bit flipped
-   // -> nnseq indicates the number of subsequences (if n%nnseq != 0, the remaining bits are not covered)
-   // -> subseqs is a Set containing the indices (from 0 to nnseq-1) of the selected subsequences
+   // - nnseq indicates the number of subsequences (if n%nnseq != 0, the remaining bits are not covered)
+   // - subseqs is a Set containing the indices (from 0 to nnseq-1) of the selected subsequences
    public Data randomSelectInNeighbourhood(int l,int u,int nsseq,Set<Integer> subseqs)
    {
       int npbits;  // number of "potential" bits (which can be actually be flipped)
       String msg = "Neighbourhood of Data object: ";
       try
       {
+         if (this.containsContractedSequences()) throw new Exception(msg + "the current implementation only handles non-contracted Data objects");
          if (l <= 0) throw new Exception(msg + "lower bound on Hamming distance is nonpositive");
          if (u < 0)  throw new Exception(msg + "upper bound on Hamming distance is negative");
          if (l > u)  throw new Exception(msg + "upper bound is greater than lower bound on Hamming distance");
@@ -1225,8 +1421,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    // Selects a random Data object in the neighbourhood from this Data object with the following properties
    // 1. the Hamming distance between this and the new object is smaller than h (as in previous method)
    // 2. only a selection of bit subsequences of (almost) equal length are allowed to have their bit flipped
-   // -> nnseq indicates the number of subsequences (if n%nnseq != 0, the remaining bits are not covered)
-   // -> subseqs is a Set containing the indices (from 0 to nnseq-1) of the selected subsequences
+   // - nnseq indicates the number of subsequences (if n%nnseq != 0, the remaining bits are not covered)
+   // - subseqs is a Set containing the indices (from 0 to nnseq-1) of the selected subsequences
    public Data randomSelectInNeighbourhood(int h,int nsseq,Set<Integer> subseqs)
    {
       return this.randomSelectInNeighbourhood(0,h,nsseq,subseqs);
@@ -1234,7 +1430,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
 
    // Selects a random Data object so that the Hamming distance to every element in given array of Data objects
    // is at least equal to the specified value (the argument h); when this is not possible, a close guess is attempted
-   // -> coded by Fatma Hamdi (M2 Miage 2020-21)
+   // (coded by Fatma Hamdi, M2 Miage 2020-21)
    public static Data randomSelectAtDistanceFrom(int h,Data[] DataArray)
    {
       int n = 0;
@@ -1290,7 +1486,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    /* Data conversions from and to other data (mostly primitive) types */
 
    // Generats a new Data object from a boolean variable
-   // (the second argument indicates the total number of bits, but only the last bit is significative)
+   // - the second argument indicates the total number of bits, but only the last bit is significative
    public static Data valueOf(boolean b,int length)
    {
       try
@@ -1310,7 +1506,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generats a new Data object from a boolean variable
-   // (the number of bits in the resulting Data object is 1)
+   // - the number of bits in the resulting Data object is 1
    public static Data valueOf(boolean b)
    {
       return Data.valueOf(b,1);
@@ -1321,6 +1517,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    {
       try
       {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
          boolean onlyonebit = true;
          for (int k = 0; k < this.numberOfBits() - 1 && onlyonebit; k++)
          {  
@@ -1338,7 +1535,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generats a new Data object from an integer variable
-   // (the second argument indicates the total number of bits) 
+   // - the second argument indicates the total number of bits
    public static Data valueOf(int integer,int length)
    {
       try
@@ -1366,17 +1563,19 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object from an integer variable
-   // (the 31 bits representing the integer are all considered, the sign is ignored)
+   // - the 31 bits representing the integer are all considered, the sign is ignored
    public static Data valueOf(int integer)
    {
       return Data.valueOf(integer,31);
    }
 
-   // Converts the Data object in a nonnegative integer (the sign bit is always 0)
+   // Converts the Data object in a nonnegative integer
+   // - the sign bit is always 0
    public int intValue()
    {
       try
       {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
          if (this.numberOfBits() >= 32) throw new Exception("Impossible to convert in integer: too many bits (sign bit is not counted)");
       }
       catch (Exception e)
@@ -1412,7 +1611,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object from a long integer
-   // (the second argument indicates the total number of bits) 
+   // - the second argument indicates the total number of bits
    public static Data valueOf(long longint,int length)
    {
       try
@@ -1440,7 +1639,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object from a long integer
-   // (the 63 bits representing the long integer are all considered, the sign is ignored)
+   // - the 63 bits representing the long integer are all considered, the sign is ignored
    public static Data valueOf(long longint)
    {
       return Data.valueOf(longint,63);
@@ -1451,6 +1650,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    {
       try
       {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
          if (this.numberOfBits() >= 64) throw new Exception("Impossible to convert to long integer: too many bits");
       }
       catch (Exception e)
@@ -1485,8 +1685,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       return 1L + value;
    }
 
-   // Generates a new Data object from a BitInteger object 
-   // (it doesn't consider the sign)
+   // Generates a new Data object from a BitInteger object (it doesn't consider the sign)
    public static Data valueOf(BigInteger bigint)
    {
       try
@@ -1517,6 +1716,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    // Converts the Data object in a nonnegative BigInteger object (the sign bit is always 0)
    public BigInteger BigIntegerValue()
    {
+      try
+      {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
       Data D = new Data(new Data(1,false),this);
       int s = D.numberOfBits()%8;
       if (s != 0)
@@ -1538,6 +1747,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    // Converts the Data object in nonnegative float of form 0.m (m is the long value of the bit sequence)
    public float floatValue()
    {
+      try
+      {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
       int l = this.numberOfBits();
       Data mantissa = this;
       if (l > 30)
@@ -1561,6 +1780,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    // Converts the Data object in nonnegative double of form 0.m (m is the long value of the bit sequence)
    public double doubleValue()
    {
+      try
+      {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
+
       int l = this.numberOfBits();
       Data mantissa = this;
       if (l > 62)
@@ -1582,7 +1811,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Generates a new Data object from a char
-   // (only 5 bits are used if the boolean argument specifies that the char is an alphabet letter)
+   // - only 5 bits are used if the boolean argument specifies that the char is an alphabet letter
    public static Data valueOf(char c,boolean isLetter)
    {
       int length = 8;
@@ -1623,6 +1852,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    {
       try
       {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
          if (this.numberOfBits() != 8) throw new Exception("Impossible to convert in ASCII character: number of bits is not 8");
       }
       catch (Exception e)
@@ -1646,6 +1876,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       char c = '\0';
       try
       {
+         if (this.containsContractedSequences()) throw new Exception("Not suitable for contracted Data objects");
          if (this.numberOfBits() > 5) throw new Exception("Impossible to convert in capital letter: too many bits (only 5 required)");
          int gap = this.intValue();
          if (gap > 25) throw new Exception("Impossible to convert in capital letter: no letter after 'Z' (bit code is " + gap + ">25)");
@@ -1661,8 +1892,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
 
    /* Data compression methods */
 
-   // Compresses the Data object so that, for every subsequence of bits of equal length, 
-   // only a maximal number of bit combinations can actually be represented
+   // Compresses the Data object so that, for every subsequence of bits of equal length
+   // - only a maximal number of bit combinations can actually be represented
+   // - this implementation is not suitable for Data objects with contracted bit sequences
    public static Data compress(Data D,int sublength,long maxcomb)
    {
       int nsubs = 0;
@@ -1671,6 +1903,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       {
          // initial verifications
          if (D == null) throw new Exception("The Data object to be compressed is null");
+         if (D.containsContractedSequences()) throw new Exception("This implementation does not handle contracted Data objects");
          if (sublength <= 0) throw new Exception("The length of bit subsequences is nonpositive");
          if (sublength > 62) throw new Exception("This implementation of 'compress' does not allow the bit subsequences to have more than 62 bits");
          if (sublength > D.numberOfBits()) throw new Exception("The length of bit sequences cannot exceed the number of bits in Data object");
@@ -1712,7 +1945,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
    }
 
    // Uncompresses a Data object previously compressed with the method 'compress'
-   // the values of sublength and maxcomb are supposed to be the same
+   // - the values of sublength and maxcomb are supposed to be the same
+   // - this implementation is not suitable for Data objects with contracted bit sequences
    public static Data uncompress(int n,Data D,int sublength,long maxcomb)
    {
       try
@@ -1720,6 +1954,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          // initial verifications
          if (n <= 0) throw new Exception("The original size of the Data object cannot be nonpositive");
          if (D == null) throw new Exception("The Data object to be uncompressed is null");
+         if (D.containsContractedSequences()) throw new Exception("This implementation does not handle contracted Data objects");
          if (D.numberOfBits () > n) throw new Exception("The original size of the Data object cannot be strictly smaller than its compressed version");
          if (sublength <= 0) throw new Exception("The length of bit subsequences is nonpositive");
          if (sublength > 62) throw new Exception("This implementation of 'uncompress' does not allow the bit subsequences to have more than 62 bits");
@@ -1821,12 +2056,27 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       boolean isData = (o instanceof Data);
       if (!isData)  return false;
 
+      // initial comparisons
       Data D = (Data) o;
-      int l = this.numberOfBits();
-      if (l != D.numberOfBits())  return false;
+      int l = this.length();
+      if (l != D.length())  return false;
 
-      l = this.data.size();  // comparison byte per byte
-      for (int i = 0; i < l; i++)  if (!this.data.get(i).equals(D.data.get(i)))  return false;
+      // using temporary objects
+      Data D1 = new Data(this);
+      Data D2 = new Data(D);
+
+      // contracted sequences?
+      if (D1.containsContractedSequences() || D2.containsContractedSequences())
+      {
+         if (D1.containsContractedSequences())  D1.uncontract();
+         if (D2.containsContractedSequences())  D2.uncontract();
+         l = D1.numberOfBits();
+         if (l != D2.numberOfBits())  return false;
+      }
+
+      // comparing byte per byte
+      l = D1.data.size();
+      for (int i = 0; i < l; i++)  if (!D1.data.get(i).equals(D2.data.get(i)))  return false;
 
       return true;
    }
@@ -1852,9 +2102,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          System.exit(1);
       }
 
+      // uncontracting the Data objects (if necessary)
+      Data D1 = new Data(this);
+      Data D2 = new Data(D);
+      if (D1.containsContractedSequences())  D1.uncontract();
+      if (D2.containsContractedSequences())  D2.uncontract();
+
+      // comparing
       int compare = 0;
-      int nD = D.numberOfBits();
-      int nthis = this.numberOfBits();
+      int nthis = D1.numberOfBits();
+      int nD = D2.numberOfBits();
       if (nthis < nD)
       {
          compare = -1;
@@ -1866,20 +2123,21 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       else
       {
          int i = 0;
-         while (i < nD && this.getBit(i) == D.getBit(i))  i++;
+         while (i < nD && D1.getBit(i) == D2.getBit(i))  i++;
          if (i != nD)
          {
-            if (this.getBit(i) < D.getBit(i))
+            if (D1.getBit(i) < D2.getBit(i))
                compare = -1;
             else
                compare = 1;
          }
       }
 
+      // we are done
       return compare;
    }         
 
-   // toString
+   // toString (it does not show the contracted bit sequences)
    public String toString()
    {
       int k = 0;
@@ -1897,7 +2155,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             }
          }
       }
-      return print + "] (" + this.numberOfBits() + ";" + this.numberOfBytes() + ")";
+      print = print + "] (" + this.numberOfBits() + ";" + this.numberOfBytes();
+      if (this.containsContractedSequences())  print = print + ";c";
+      return print + ")";
    }
 
    // binomial calculation (private and static, no argument verification)
@@ -1944,7 +2204,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             Exception E = new Exception("Constructor public Data(int,boolean)");
             if (D == null) throw E;
             if (D.numberOfBits() != n) throw E;
+            if (D.length() != n) throw E;
             if (D.numberOfBytes() < n/8) throw E;
+            if (D.containsContractedSequences()) throw E;
             if (bit)  if (D.numberOfOnes() != n) throw E;
             if (!bit) if (D.numberOfZeros() != n) throw E;
             if (!D.check_invariants()) throw E;
@@ -1965,6 +2227,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D == null) throw E;
             if (D.numberOfBits() != n) throw E;
             if (D.numberOfBytes() < n/8) throw E;
+            if (D.length() != n) throw E;
+            if (D.containsContractedSequences()) throw E;
             if (D.numberOfOnes() < Math.floor(p*n)) throw E;
             if (D.numberOfOnes() > Math.floor((p + 0.01)*n)) throw E;
             if (!D.check_invariants()) throw E;
@@ -1987,7 +2251,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D == null) throw E;
             if (D.numberOfBits() != n) throw E;
             if (D.numberOfBytes() < n/8) throw E;
+            if (D.length() != n) throw E;
             for (int i = 0; i < n; i++)  if (bits.contains(i) != (D.getBit(i) == 1))  throw E;
+            if (D.containsContractedSequences()) throw E;
             if (!D.check_invariants()) throw E;
             if (R.nextDouble() < 0.2)  another = D;
          }
@@ -2000,12 +2266,15 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          try
          {
             // public Data(Data)
+            // (use of contracted bit sequences tested in 'Data contraction')
             Data D = new Data(another);
             Exception E = new Exception("Constructor public Data(Data)");
             if (D == null) throw E;
             if (D.numberOfBits() != another.numberOfBits()) throw E;
             if (D.numberOfBytes() != another.numberOfBytes()) throw E;
-            for (int i = 0; i < n; i++)  if (D.getBit(i) != another.getBit(i))  throw E;
+            if (D.length() != n) throw E;
+            for (int i = 0; i < n; i++)  if (D.getBit(i) != another.getBit(i)) throw E;
+            if (D.containsContractedSequences()) throw E;
             if (!D.check_invariants()) throw E;
          }
          catch (Exception e)
@@ -2017,13 +2286,16 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          try
          {
             // public Data(Data,boolean)
+            // (use of contracted bit sequences tested in 'Data contraction')
             boolean flip = R.nextBoolean();
             Data D = new Data(another,flip);
             Exception E = new Exception("Constructor public Data(Data,boolean)");
             if (D == null) throw E;
             if (D.numberOfBits() != another.numberOfBits()) throw E;
             if (D.numberOfBytes() != another.numberOfBytes()) throw E;
-            for (int i = 0; i < n; i++)  if (flip == (D.getBit(i) == another.getBit(i)))  throw E;
+            if (D.length() != n) throw E;
+            for (int i = 0; i < n; i++)  if (flip == (D.getBit(i) == another.getBit(i))) throw E;
+            if (D.containsContractedSequences()) throw E;
             if (!D.check_invariants()) throw E;
             if (flip)  if (R.nextDouble() < 0.3)  another = D;
          }
@@ -2045,10 +2317,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D == null) throw E;
             if (D.numberOfBits() != n) throw E;
             if (D.numberOfBytes() < n/8) throw E;
+            if (D.length() != n) throw E;
             for (int i = 0; i < n; i++)
             {
                if (ch[D.getBit(i)] != bitstring.charAt(i)) throw E;
             }
+            if (D.containsContractedSequences()) throw E;
             if (!D.check_invariants()) throw E;
             if (R.nextDouble() < 0.2)  another = D;
          }
@@ -2061,12 +2335,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          try
          {
             // public Data(Data,Data)
+            // (use of contracted bit sequences tested in 'Data contraction')
             int n1 = 2 + R.nextInt(8);
             Data D1 = new Data(n1,0.1 + 0.8*R.nextDouble());
             Data D = new Data(D1,another);
             Exception E = new Exception("Constructor public Data(Data,Data)");
             if (D == null) throw E;
             if (D.numberOfBits() != D1.numberOfBits() + another.numberOfBits()) throw E;
+            if (D.length() != D1.length() + another.length()) throw E;
             if (8*D.numberOfBytes() - D.numberOfBits() >= 8) throw E;
             int k = 0;
             for (int i = 0; i < D1.numberOfBits(); i++)
@@ -2079,6 +2355,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                if (another.getBit(j) != D.getBit(k)) throw E;
                k++;
             }
+            if (D.containsContractedSequences()) throw E;
             if (!D.check_invariants()) throw E;
          }
          catch (Exception e)
@@ -2090,6 +2367,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          try
          {
             // public Data(Data,int,int)
+            // (use of contracted bit sequences tested in 'Data contraction')
             Exception E = new Exception("Constructor public Data(Data,int,int)");
             if (n > 2 && n < max/2)
             {
@@ -2102,10 +2380,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                if (D == null) throw E;
                if (D.numberOfBits() != another.numberOfBits()) throw E;
                if (D.numberOfBytes() != another.numberOfBytes()) throw E;
+               if (D.length() != another.length()) throw E;
                for (int i = 0; i < another.numberOfBits(); i++)
                {
                   if (another.getBit(i) != D.getBit(i)) throw E;
                }
+               if (D.containsContractedSequences()) throw E;
                if (!D.check_invariants()) throw E;
             }
             else if (n > 6)
@@ -2120,10 +2400,12 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                Data D = new Data(D1,new Data(D2,D3));
                if (D.numberOfBits() != another.numberOfBits()) throw E;
                if (D.numberOfBytes() != another.numberOfBytes()) throw E;
+               if (D.length() != another.length()) throw E;
                for (int i = 0; i < another.numberOfBits(); i++)
                {
                   if (another.getBit(i) != D.getBit(i)) throw E;
                }
+               if (D.containsContractedSequences()) throw E;
                if (!D.check_invariants()) throw E;
             }
          }
@@ -2150,10 +2432,13 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             D1 = new Data(D1,true);  // not (A and B)
             if (D1.numberOfBits() != D2.numberOfBits()) throw E;
             if (D1.numberOfBytes() != D2.numberOfBytes()) throw E;
+            if (D1.length() != D2.length()) throw E;
             for (int i = 0; i < D1.numberOfBits(); i++)
             {
                if (D1.getBit(i) != D2.getBit(i)) throw E;
             }
+            if (D1.containsContractedSequences()) throw E;
+            if (D2.containsContractedSequences()) throw E;
             if (!D1.check_invariants()) throw E;
             if (!D2.check_invariants()) throw E;
             if (R.nextDouble() < 0.2)  another = D1;
@@ -2163,6 +2448,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D1 == null) throw E;
             if (D1.numberOfBits() != A.numberOfBits()) throw E;
             if (D1.numberOfBytes() != A.numberOfBytes()) throw E;
+            if (D1.length() != A.length()) throw E;
+            if (D1.containsContractedSequences()) throw E;
             for (int i = 0; i < D1.numberOfBits(); i++)
             {
                if (D1.getBit(i) != 1) throw E;
@@ -2174,6 +2461,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D2 == null) throw E;
             if (D2.numberOfBits() != B.numberOfBits()) throw E;
             if (D2.numberOfBytes() != B.numberOfBytes()) throw E;
+            if (D2.length() != B.length()) throw E;
+            if (D2.containsContractedSequences()) throw E;
             for (int i = 0; i < D2.numberOfBits(); i++)
             {
                if (D2.getBit(i) != 0) throw E;
@@ -2188,6 +2477,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (Y == null) throw E;
             if (X.numberOfBits() != Y.numberOfBits()) throw E;
             if (X.numberOfBytes() != Y.numberOfBytes()) throw E;
+            if (X.length() != Y.length()) throw E;
+            if (X.containsContractedSequences()) throw E;
+            if (Y.containsContractedSequences()) throw E;
             for (int i = 0; i < X.numberOfBits(); i++)
             {
                if (X.getBit(i) != Y.getBit(i)) throw E;
@@ -2200,6 +2492,8 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (X == null) throw E;
             if (X.numberOfBits() != Y.numberOfBits()) throw E;
             if (X.numberOfBytes() != Y.numberOfBytes()) throw E;
+            if (X.length() != Y.length()) throw E;
+            if (X.containsContractedSequences()) throw E;
             for (int i = 0; i < X.numberOfBits(); i++)
             {
                if (X.getBit(i) != A.getBit(i)) throw E;
@@ -2227,7 +2521,9 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D == null) throw E;
             if (D.numberOfBits() != another.numberOfBits()) throw E;
             if (D.numberOfBytes() != another.numberOfBytes()) throw E;
+            if (D.length() != another.length()) throw E;
             if (new Data(D,another,"xor").numberOfOnes() > 0) throw E;
+            if (D.containsContractedSequences()) throw E;
             if (!D.check_invariants()) throw E;
          }
          catch (Exception e)
@@ -2305,6 +2601,79 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       }
       System.out.println("OK");
 
+      // Data contraction
+      System.out.print("Testing methods for Data contraction ... ");
+      for (int itest = 0; itest < NTESTS; itest++)
+      {
+         // exception
+         Exception E = new Exception("Exception raised when contracting and uncontracting Data objects");
+
+         try
+         {
+            // contract and uncontract (bit sequence contraction-based compression)
+            Data toy = new Data(5,true);
+            Data ctoy = new Data(toy);
+            ctoy.contract(1,5);
+            if (ctoy.length() != 5) throw E;
+            if (ctoy.numberOfBits() != 2) throw E;
+            if (!ctoy.containsContractedSequences()) throw E;
+            if (ctoy.isBitContracted(0)) throw E;
+            if (!ctoy.isBitContracted(1)) throw E;
+       
+            // preparing the Data object with contracted sequences
+            int n = 10 + R.nextInt(max - 10);
+            Data original = new Data(n,0.5);
+            Data D = new Data(original);
+            int nc = 1 + R.nextInt(6);
+            for (int i = 0; i < nc && n > 10; i++)
+            {
+               int first = R.nextInt(n - 5);
+               int last = first + 2 + R.nextInt(n - first - 2);
+               D.contract(first,last);
+               if (!D.isBitContracted(first)) throw E;
+               n = D.numberOfBits();
+            }
+
+            if (D.containsContractedSequences())
+            {
+               // length
+               if (D.length() != original.numberOfBits()) throw E;
+
+               // standard uncontract
+               Data U = new Data(D);
+               U.uncontract();
+               if (!U.equals(original)) throw E;
+
+               // concat two Data objects with contracted sequences, and uncontract
+               original = new Data(toy,original);
+               D = new Data(ctoy,D);
+               U = new Data(D);
+               U.uncontract();
+               if (!U.equals(original)) throw E;
+
+               // flip all bits and uncontract
+               original = new Data(original,true);
+               D = new Data(D,true);
+               U = new Data(D);
+               U.uncontract();
+               if (!U.equals(original)) throw E;
+
+               // cut a piece out and uncontract
+               original = new Data(original,5,original.numberOfBits());
+               D = new Data(D,2,D.numberOfBits());
+               U = new Data(D);
+               U.uncontract();
+               if (!U.equals(original)) throw E;
+            }
+         }
+         catch (Exception e)
+         {
+            e.printStackTrace();
+            System.exit(1);
+         }
+      }
+      System.out.println("OK");
+
       // bitIterator (and Data method "next")
       System.out.print("Testing bitIterator ... ");
       for (int itest = 0; itest < NTESTS; itest++)
@@ -2372,48 +2741,6 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (n > 1 && !It.hasNext()) throw E;
             It.reset();
             if (new Data(bitFlipped,It.withNextBitFlipped(),"xor").numberOfZeros() != D.numberOfBits()) throw E;
-         }
-         catch (Exception e)
-         {
-            e.printStackTrace();
-            System.exit(1);
-         }
-
-         try
-         {
-            // iterating on spiral Data objects generated from the current Data object and with center at current bit
-            int n = min + R.nextInt(max - min);
-            Data D = new Data(n,0.4 + 0.2*R.nextDouble());
-            bitIterator It = D.iterator();
-            int k = R.nextInt(n);
-            for (int i = 0; i < k; i++)  It.next();
-            if (k != 0 && k != n - 1)
-            {
-               int m = k;
-               if (n - k - 1 < m)  m = n - k - 1;
-               int h = R.nextInt(m);
-               if (h > 0)
-               {
-                  Data pF = null;
-                  Data F = null;
-                  Data df = null;
-                  for (int i = 0; i < 2*h; i++)
-                  {
-                     F = It.nextOnSpiral();
-                     if (!F.check_invariants()) throw E;
-                     if (pF != null)
-                     {
-                        df = Data.diff(F,pF);
-                        if (df.numberOfOnes() != 1) throw E;
-                     }
-                     pF = new Data(F);
-                  }
-                  df = Data.diff(D,F);
-                  if (df.numberOfOnes() != 2*h) throw E;
-               }
-               for (int i = 2*h; i < 2*m + 3; i++)  if (It.hasNextOnSpiral())  It.nextOnSpiral();
-               if (It.hasNextOnSpiral()) throw E;
-            }
          }
          catch (Exception e)
          {
@@ -2759,7 +3086,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          }
       }
       System.out.println("OK");
- 
+
       // Hamming-distance based methods
       System.out.print("Testing Hamming-distance based methods ... ");
       for (int itest = 0; itest < NTESTS; itest++)
@@ -2775,6 +3102,18 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             if (D1.hammingDistanceTo(D2) != D2.hammingDistanceTo(D1)) throw E;
             if (diff.numberOfOnes() != D1.hammingDistanceTo(D2)) throw E;
             if (diff.numberOfOnes() != D2.hammingDistanceTo(D1)) throw E;
+            if (n > 10)
+            {
+               int cut1 = R.nextInt(n/2 - 1);
+               int cut2 = cut1 + 2 + R.nextInt(n/2 - 2);
+               D1.contract(cut1,cut2);
+               if (cut1 > 0)  cut1--;
+               if (cut2 < D2.numberOfBits())  cut2++;
+               D2.contract(cut1,cut2);
+               if (D1.hammingDistanceTo(D2) != D2.hammingDistanceTo(D1)) throw E;
+               if (diff.numberOfOnes() != D1.hammingDistanceTo(D2)) throw E;
+               if (diff.numberOfOnes() != D2.hammingDistanceTo(D1)) throw E;
+            }
          }
          catch (Exception e)
          {
@@ -2840,7 +3179,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          // public Data randomSelectInNeighbourhood(?,int)
          try
          {
-            int n = min + R.nextInt(max - min);
+            int n = min + 1 + R.nextInt(max - min - 1);
             int l = 1 + n/10;
             int u = 1 + 3*(l - 1);
             Data D = new Data(n,0.5);
@@ -2853,6 +3192,14 @@ public class Data implements Comparable<Data>, Iterable<Integer>
             u = 1 + 5*(l - 1);
             F = D.randomSelectInNeighbourhood(u);
             if (F.hammingDistanceTo(D) > u) throw E;
+            if (n > 10)
+            {
+               int h = 2 + R.nextInt(3);
+               D.contract(0,h);
+               F = D.randomSelectInNeighbourhood(h);
+               if (D.hammingDistanceTo(F) < h) throw E;
+               if (F.hammingDistanceTo(D) > h) throw E;
+            }
          }
          catch (Exception e)
          {
@@ -3160,7 +3507,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
       System.out.print("Testing methods for Data compression ... ");
       for (int itest = 0; itest < NTESTS; itest++)
       {
-         // compress and uncompress
+         // compress and uncompress (arithmetic compression)
          try
          {
             int n = 10 + R.nextInt(max - 10);
@@ -3177,7 +3524,7 @@ public class Data implements Comparable<Data>, Iterable<Integer>
                original = new Data(original,Data.valueOf(value,length));
             }
             Data compressed = Data.compress(original,length,(long) maxcomb);
-            Exception E = new Exception("Exception raised when compressing and uncompressing Data objects");
+            Exception E = new Exception("Exception raised when compressing and uncompressing (arithmetic compression)");
             if (compressed == null) throw E;
             if (!compressed.check_invariants()) throw E;
             if (compressed.numberOfBits() > original.numberOfBits()) throw E;
