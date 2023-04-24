@@ -1,68 +1,72 @@
 
 binMeta project
 
-This is the preliminary version of a Java project having as main aim of collecting in one unique 
-Java package several meta-heuristic searches that have been proposed over the last years for the 
-solution of combinatorial optimization problems.
+This Java project intends collecting, in one unique Java package, several meta-heuristic searches that have 
+been proposed over the last years for the solution of combinatorial optimization problems.
 
-The solutions to the optimization problems are represented via the "immutable" objects of the 
-Data class, where the representation is essentially given by a bit string. Data objects can 
-be grouped together by using a Memory object, which is supposed to automatically manage situations
-where the limit on storage capacity is reached, by performing different kinds of algorithms 
-for the selection of the "victims" to be removed.
+The solutions to the optimization problems are represented via the "immutable" objects of the Data class, 
+where the representation is essentially given by a bit string. Data objects can be grouped together by using 
+a Memory object, which is supposed to automatically manage situations where the limit on storage capacity is 
+reached, by using different kinds of algorithms for the selection of the "victims" to be removed.
 
-At this stage of development, we only consider combinatorial optimization problems without 
-constraints, so that they can be represented by defining only the corresponding objective function.
-All optimization problems are supposed to be represented by subclasses of the abstract class named 
-Objective. Only three simple objectives are currently implemented: BitCounter, ColorPartition,
-and Fermat.
+Every optimization problem, i.e. the class related to its objective function, needs to implement the Objective 
+interface.
 
-The meta-heuristic searches are supposed to inherit from the abstract class named "binMeta" (the
-same name as for the Java project). Only two meta-heuristic searches are currently implemented:
-- RandomWalk, it simply searches in the neighbourhood of a given initial solution by taking 
-  completely random steps;
-- WolfSearch, it is inspired by the hunting behavior of wolves (see file REFS for the main 
-  reference). 
+At the current stage of development, the repository contains the following list of implementations of Objective:
+1. BitCounter (trivial problem included in the initial commit of this project)
+2. ColorPartition (toy problem with a graphic representation of the solutions in 2D)
+3. Fermat (toy problem inspired by the famous "last" Fermat theorem)
+4. Pi (toy problem where three real numbers are represented by one unique bit string)
+5. SubsetSum
+6. NumberPartition
+7. Knapsack
+8. SetCover
+Notice that the last two implementations concern problems with constraints, which have been included in the
+objective function by adding penalty terms.  
 
-Only exception to the rule: the LocalOpt class inherits from bitMeta even if it does not implement
-a meta-heuristic search. It rather implements a method for local optimization that is based on
-the idea to perform the modifications on the current solution that allow us to obtain the
-best improvement on the objective function value. As all local searches, this method is likely
-to get stuck at local optima; however, it can be useful in the implementation of other 
-meta-heuristic searches (the current implementation of WolfSearch is one example).
+Every meta-heuristic search needs to inherit from the binMeta abstract class. They can also implement Objective
+if one wants to use one meta-heuristic search for finding the optimal parameters of another meta-heuristic
+search, either for a particular optimization problem, or for a set of given problems.
 
-This Java project was started with aim to collect the best implementations given by the students 
-of the University of Rennes1 that have attended some of my courses. The following terminology
-is used to make reference to such implementations:
--> the mention "proposed by" means that the student has simply proposed the implementation of 
-   a method or class, but the implementation is not his/hers.
--> the mention "initial version coded by" means that the student has submitted a good implementation
-   of the method or the class, but changes have been subsequently performed (may be simply for
-   compatibility with the development of other classes).
--> the mention "coded by" means that the code for the method or the class is the one provided by
-   the student, with (if any) very light changes.
-The implementations are mainly collected from the projects of the course on "Multi-threading Operating
-Systems" (Master in Computer Science, ISTIC, University of Rennes1). For their course projects, 
-different meta-heuristic search have been assigned to the students in the two academic year 2019-20 
-and 2020-21. Starting from the second semester of the academic year 2020-21, this Java project is also 
-followed by a group of Master students (first year) of the MIAGE teaching program at ISTIC, University 
-of Rennes1, over a period covering 3 months.
+At the current stage of development, the repository contains the following list of meta-heuristic searches:
+1. RandomWalk
+2. WolfSearch
+3. MultiStart
+4. VariableNeighbourhoodSearch (with several of its variants)
 
-When a commit holds the name of a course, this indicates that it represents the last commit related
-to the work performed in the framework of that course, together with the academic year. 
+Only exception to the rule: the LocalOpt class inherits from bitMeta but it does not implement a meta-heuristic 
+search. LocalOpt implements a simple method for local optimization.
 
-When a commit holds the name of a conference (or any other scientific publication), this indicates 
-that the corresponding version of the package was used for the computational experiments presented
-in that scientific publication.
+This Java project has begun by collecting some of the best implementations resulting from Master projects at
+University of Rennes1. Credit to the students is given in the following way:
+-> the mention "proposed by" means that the student has simply proposed the implementation of a method or class, 
+   but the published implementation is not his/hers.
+-> the mention "initial version coded by" means that the student has submitted a good implementation of the method 
+   or the class, but changes have been subsequently performed (this may simply be due to ensure compatibility with 
+   the other classes).
+-> the mention "coded by" means that the code for the method or the class is the one provided by the student, with 
+   very light changes (if any).
+The implementations are mainly collected from the projects of the course on "Multi-threading Operating Systems" 
+(Master in Computer Science, first year, ISTIC, University of Rennes1), as well as from the professional projects 
+of MIAGE Master students (both first and second year, ISTIC, University of Rennes1). More recently, a PhD student
+also contributed.
 
-And to end: why "binMeta"? The "bin" part can be interpreted as "binary", which is important
-to point out in this project because all the implemented meta-heuristic searches are supposed 
-to directly work with a binary representations of the data. Moreover, if you know some German, 
-the "bin" may remind you of "(ich) bin" (I am), followed by "Meta", which recalls the name 
-"meta-heuristic", but it can be interpreted as something beyond the simple implementation of 
-one meta-heuristic search.
+When a commit holds the name of a course, this indicates that it represents the last commit related to the work 
+performed in the framework of that course, together with the academic year. 
 
-January 3rd, 2021
+When a commit holds the name of a conference (or any other scientific publication), this indicates that the code was
+used for the computational experiments presented in that scientific publication.
+
+When the contribution of a student is considered to be rather important, the student is invited to make a push request 
+on the repository.
+
+And finally: why "binMeta"? Well, the "bin" part can be interpreted as "binary", which is important to point out in 
+this project because all the implemented meta-heuristic searches are supposed to directly work with binary 
+representations of the data. Moreover, if you know some German, the "bin" may remind you of "(ich) bin" (I am), 
+followed by "Meta", which is part of "meta-heuristic", but it can also be interpreted in our case as something beyond 
+the simple implementation of one meta-heuristic search.
+
+April 24th, 2023
 
 Antonio Mucherino
 

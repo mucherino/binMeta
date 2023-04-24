@@ -5,7 +5,7 @@
  *
  * initial version coded by Remi Viotty, M1 Info 2019-20
  *
- * last update: May 20, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
@@ -25,15 +25,18 @@ public class WolfSearch extends binMeta implements Objective
    private Memory wolves;  // Wolf population
 
    // WolfSearch constructor
-   public WolfSearch(Objective obj,int np,int memorySize,int minVision,int maxVision,double minThreat,double maxThreat,long maxTime)
+   public WolfSearch(Data startPoint,Objective obj,int np,int memorySize,int minVision,int maxVision,double minThreat,double maxThreat,long maxTime)
    {
       this.isObjective = false;
       try
       {
+         if (startPoint == null) throw new Exception("WolfSearch: the reference to the Data starting point is null");
          if (obj == null) throw new Exception("WolfSearch: the reference to the objective is null");
          this.obj = obj;
          Data ref = this.obj.solutionSample();
          int n = ref.numberOfBits();
+         if (n != startPoint.numberOfBits()) throw new Exception("WolfSearch: number of bits in starting point does not match with Objective instance");
+         if (n < 3) throw new Exception("WolfSearch: number of involved bits is so small that the use of meta-heuristics is not justified");
          if (memorySize <= 0) throw new Exception("WolfSearch: specified size of the wolf memory is nonpositive");
          this.memorySize = memorySize;
          if (maxVision < 0 || maxVision > n) throw new Exception("WolfSearch: meaningless maximum vision parameter");
@@ -51,7 +54,7 @@ public class WolfSearch extends binMeta implements Objective
          this.wolves = new Memory(this.np,"fifo",3);  // 3 Memory parameters: vision, pbThrets, ephemeral memory
          while (!this.wolves.isFull())
          {
-            Data D = new Data(n,0.2 + 0.6*R.nextDouble());
+            Data D = startPoint.randomSelectInNeighbourhood(1 + R.nextInt(n/2));
             int k = this.wolves.add(D,this.obj.value(D));
             int vision = minVision;
             if (maxVision - minVision > 0)  vision = vision + R.nextInt(maxVision - minVision);
@@ -72,6 +75,18 @@ public class WolfSearch extends binMeta implements Objective
          e.printStackTrace();
          System.exit(1);
       }
+   }
+
+   // WolfSearch constructor
+   public WolfSearch(Data startPoint,Objective obj,long maxTime)
+   {
+      this(startPoint,obj,100,100,2,(int) Math.floor(0.7*startPoint.numberOfBits()),0.1,0.4,maxTime);
+   }
+
+   // WolfSearch constructor (previously constructor #1)
+   public WolfSearch(Objective obj,int np,int memorySize,int minVision,int maxVision,double minThreat,double maxThreat,long maxTime)
+   {
+      this(obj.solutionSample(),obj,np,memorySize,minVision,maxVision,minThreat,maxThreat,maxTime);
    }
 
    // WolfSearch constructor
@@ -112,6 +127,13 @@ public class WolfSearch extends binMeta implements Objective
       return new Data(size,0.5);
    }
 
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return null;
+   }
+
    // optimize (by WolfSearch)
    @Override
    public void optimize()
@@ -129,6 +151,7 @@ public class WolfSearch extends binMeta implements Objective
       // getting started
       Random R = new Random();
       int it = 0;
+      long localTime = Math.max(100L,this.maxTime/10L);
       long startime = System.currentTimeMillis();
 
       // main loop
@@ -148,7 +171,7 @@ public class WolfSearch extends binMeta implements Objective
              Data D = wolf.randomSelectInNeighbourhood(vision);
              if (R.nextInt(2) == 0)
              {
-                LocalOpt lopt = new LocalOpt(D,this.obj,2+R.nextInt(18));
+                LocalOpt lopt = new LocalOpt(D,this.obj,localTime);
                 lopt.optimize();
                 D = lopt.getSolution();
              }
@@ -284,7 +307,9 @@ public class WolfSearch extends binMeta implements Objective
    // instance01 (SubsetSum, 2ms)
    public static WolfSearch instance01()
    {
-      Objective obj = SubsetSum.instance01();
+      Random R = new Random();
+      int n = 6 + R.nextInt(14);
+      Objective obj = new SubsetSum(n,2,n,R);
       return new WolfSearch(obj,2);
    }
 

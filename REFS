@@ -1,26 +1,20 @@
 
-MAIN REFERENCES
+MAIN REFERENCES [last update: April 24, 2023]
 
 About binMeta.
 
-1. A. Mucherino
+1. A. Mucherino,
    binMeta: a New Java Package for Meta-heuristic Searches,
-   to appear in Lectures Notes in Computer Science, 2021.
+   Lecture Notes in Computer Science 13127, 
+   Proceedings of the 13th International Conference on Large-Scale Scientific Computations (LSSC21), 
+   Sozopol, Bulgaria, 242-249, 2022.
 
-About the implemented meta-heuristic searches.
+2. S.B. Hengeveld, A. Mucherino,
+   Variable Neighborhood Search in Hamming Space,
+   to appear in Lecture Notes in Computer Science, 2023.
 
-WOLF SEARCH (initial commit on December 13, 2020)
+Please refer to the citations in the papers above for references on the considered optimization
+problems, as well as on the implemented meta-heuristics.
 
-1. R. Tang, S. Fong, X.S. Yang, S. Deb,
-   Wolf Search Algorithm with Ephemeral Memory,
-   IEEE Proceedings, 7th International Conference on Digital Information Management (ICDIM 2012),
-   Macau, 165-172, 2012.
-
-VARIABLE NEIGHBOURHOOD SEARCH (initial commit on June 25, 2021)
-
-2. N. Mladenović, P. Hansen, 
-   Variable neighborhood search, 
-   Computers & Operations Research 24(11), 1097-1100, 1997.
-
-last update: June 25, 2021.
+AM
 

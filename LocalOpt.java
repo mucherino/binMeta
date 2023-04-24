@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: April 21, 2021
+ * last update: April 24, 2023
  *
  * AM
  */
@@ -71,7 +71,7 @@ public class LocalOpt extends binMeta
          }
 
          // performing full step along the opposite gradient direction
-         if (!indices.isEmpty())
+         if (!indices.isEmpty() && System.currentTimeMillis() - startime < this.maxTime)
          {
             Data G = new Data(n,indices);
             Data E = Data.diff(D,G);
@@ -86,6 +86,7 @@ public class LocalOpt extends binMeta
                indices.remove(k);
                G = new Data(n,indices);
                E = Data.diff(D,G);
+               if (System.currentTimeMillis() - startime < this.maxTime)  break;
                value = this.obj.value(E);
             }
 

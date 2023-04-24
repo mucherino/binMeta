@@ -796,8 +796,6 @@ public class Data implements Comparable<Data>, Iterable<Integer>
          D.flipBit(this.bitPointer);
          return D;
       }
-
-      /* initial implementations by Narcisse Kouadio (M2 Miage 2020-21) of "spiral iterator" removed */
    }
 
    // Generates the next Data object in a given neighbourhood of 'this' with a given Hamming radius

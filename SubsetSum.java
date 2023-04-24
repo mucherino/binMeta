@@ -3,25 +3,26 @@
  *
  * binMeta project
  *
- * initial version coded by Franck Kouamelan (M1 Miage 2020-21)
+ * History:
+ * - initial version coded by Franck Kouamelan (M1 Miage 2020-21)
+ * - constructors rewritten (automatic generation)
  *
- * last update: April 26, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.Iterator;
 import java.util.Random;
 
 public class SubsetSum implements Objective
 {
    // attributes
-   private ArrayList<Integer> listOfIntegers;
+   private List<Integer> listOfIntegers;
    private int target;
 
    // constructor (from List)
@@ -42,42 +43,58 @@ public class SubsetSum implements Objective
       }
    }
 
-   // constructor (from Set)
-   public SubsetSum(Set<Integer> setOfIntegers,int target)
+   // constructor (randomly generated instance)
+   public SubsetSum(int n,int lb,int ub,double p,Random R)
    {
       try
       {
-         if (setOfIntegers == null) throw new Exception("SubsetSum: Set object is null");
-         if (setOfIntegers.size() == 0) throw new Exception("SubsetSum: Set object is empty");
-         this.listOfIntegers = new ArrayList<Integer> (setOfIntegers);
-         if (target <= 0) throw new Exception("SubsetSum: specified target value is nonpositive");
-         this.target = target;
+         if (n <= 0) throw new Exception("SubsetSum: cannot create instance with a nonpositive number of elements");
+         if (n <= 2) throw new Exception("SubsetSum: cannot create instance with such a small list of integers");
+         if (lb <= 0) throw new Exception("SubsetSum: the given lower bound is nonpositive");
+         if (ub <= 0) throw new Exception("SubsetSum: the given upper bound is nonpositive");
+         if (lb > ub) throw new Exception("SubsetSum: the given lower bound for the integers is strictly larger than the upper bounds");
+         if (ub < 2) throw new Exception("Subsetsum: bounds [" + lb + "," + ub + "] are too strict");
+         if (p < 0.1) throw new Exception("Subsetsum: the given probability is too small");
+         if (p > 0.9) throw new Exception("Subsetsum: the given probability is too big");
       }
       catch (Exception e)
       {
          e.printStackTrace();
          System.exit(1);
+      }
+      if (R == null)  R = new Random();
+
+      // randomly generating the list of integers (and the target)
+      this.listOfIntegers = new ArrayList<Integer> (n);
+      this.target = 0;
+      for (int i = 0; i < n; i++)
+      {
+         int number = lb + R.nextInt(ub - lb);
+         this.listOfIntegers.add(number);
+         if (R.nextDouble() < p)  this.target = this.target + number;
+      }
+
+      // verification for small percentage values
+      if (this.target == 0)
+      {
+         int k = R.nextInt(n);
+         this.target = this.listOfIntegers.get(k);
+         if (R.nextBoolean())
+         {
+            int h = k;
+            do {
+               h = R.nextInt(n);
+            }
+            while (k == h);
+            this.target = this.target + this.listOfIntegers.get(h);
+         }
       }
    }
 
-   // constructor (from array)
-   public SubsetSum(int[] integers,int target)
+   // constructor (randomly generated instance, also p is random here, but R cannot be null)
+   public SubsetSum(int n,int lb,int ub,Random R)
    {
-      try
-      {
-         if (integers == null) throw new Exception("SubsetSum: array of integers is null");
-         int n = integers.length;
-         if (n == 0) throw new Exception("SubsetSum: array of integers contains no elements");
-         this.listOfIntegers = new ArrayList<Integer> (n);
-         for (int i = 0; i < n; i++)  this.listOfIntegers.add(integers[i]);
-         if (target <= 0) throw new Exception("SubsetSum: specified target value is nonpositive");
-         this.target = target;
-      }
-      catch (Exception e)
-      {
-         e.printStackTrace();
-         System.exit(1);
-      }
+      this(n,lb,ub,0.2 + 0.6*R.nextDouble(),R);
    }
 
    // getName
@@ -104,6 +121,13 @@ public class SubsetSum implements Objective
    public Data solutionSample()
    {
       return new Data(this.listOfIntegers.size(),0.5);
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return (Double) 0.0;
    }
 
    // value
@@ -140,62 +164,32 @@ public class SubsetSum implements Objective
       return "[" + this.getName() + ": " + this.listOfIntegers.size() + " integers, target subset sum is " + this.target + "]";
    }
 
-   /* static methods defining some problem instances (from https://people.sc.fsu.edu/~jburkardt/datasets/datasets.html) */
-
-   // instance01 (combines p01 and p02 of the dataset)
-   public static SubsetSum instance01()
-   {
-      int [] ints = {15,22,14,26,32,9,16,8,267,493,869,961,1000,1153,1246,1598,1766,1922};
-      return new SubsetSum(ints,5895);
-   }
-
-   // instance02 (corresponds to p03 in the database)
-   public static SubsetSum instance02()
-   {
-      int [] ints = {518533,1037066,2074132,1648264,796528,1593056,686112,1372224,244448,488896,977792,1955584,1411168,322336,644672,1289344,78688,157376,314752,629504,1259008};
-      return new SubsetSum(ints,2463098);
-   }
-
-   // instance03 (combines p04, p05, p06 and p07)
-   public static SubsetSum instance03()
-   {
-      int [] ints = {41,34,21,20,8,7,7,4,3,3,81,80,43,40,30,26,12,11,9,1,2,4,8,16,32,25,27,3,12,6,15,9,30,21,19};
-      return new SubsetSum(ints,222);
-   }
-
    // main
    public static void main(String[] args)
    {
-      System.out.println("Objective SubsetSum");
+      System.out.println("Objective SubsetSum\n");
       Random R = new Random();
-      SubsetSum obj = null;
-      String constrName = null;
-      int constructor = R.nextInt(3);
-      if (constructor == 0)
-      {
-         constrName = "SubsetSum(List<Integer>,int)";
-         ArrayList<Integer> loi = new ArrayList<Integer> (4);
-         loi.add(3);  loi.add(4);  loi.add(2);  loi.add(4);
-         obj = new SubsetSum(loi,8);
-      }
-      else if (constructor == 1)
-      {
-         constrName = "SubsetSum(Set<Integer>,int)";
-         TreeSet<Integer> soi = new TreeSet<Integer> ();
-         soi.add(3);  soi.add(5);  soi.add(2);
-         obj = new SubsetSum(soi,8);
-      }
-      else
-      {
-         constrName = "SubsetSum(int[],int)";
-         int [] array = {5,4,6,2,1,4};
-         obj = new SubsetSum(array,19);
-      }
-      System.out.println("using constructor " + constrName);
+
+      // predefined instance (instance p1 from https://people.sc.fsu.edu/~jburkardt/datasets/datasets.html) 
+      List<Integer> listOfIntegers = Arrays.asList(new Integer[] {15,22,14,26,32,9,16,8});
+      System.out.println("Constructor from List + Target");
+      SubsetSum obj = new SubsetSum(listOfIntegers,53);
       System.out.println(obj);
       System.out.println("integer values : " + obj.getIntegerArrayListCopy());
       System.out.println("target value : " + obj.getTargetValue());
       Data D = obj.solutionSample();
+      System.out.println("sample solution : " + D);
+      System.out.println("objective function value in sample solution : " + obj.value(D));
+      System.out.println();
+
+      // random instance
+      System.out.println("Constructor for random instances");
+      int n = 6 + R.nextInt(94);
+      obj = new SubsetSum(n,2,n,R);
+      System.out.println(obj);
+      if (n < 10)  System.out.println("integer values : " + obj.getIntegerArrayListCopy());
+      System.out.println("target value : " + obj.getTargetValue());
+      D = obj.solutionSample();
       System.out.println("sample solution : " + D);
       System.out.println("objective function value in sample solution : " + obj.value(D));
    }

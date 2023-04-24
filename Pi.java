@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 13, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
@@ -33,6 +33,13 @@ public class Pi implements Objective
       }
    }
 
+   // Constructor (with n = 10)
+   // - it is not verified that ndigits%10 is 0
+   public Pi(int ndigits)
+   {
+      this(10,ndigits/10);
+   }
+
    // getName
    @Override
    public String getName()
@@ -45,6 +52,13 @@ public class Pi implements Objective
    public Data solutionSample()
    {
       return new Data(this.n*this.ndigits,0.5);
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return -Math.PI;
    }
 
    // value
@@ -99,24 +113,6 @@ public class Pi implements Objective
       double dx = x[j] - x[i];
       double dy = y[j] - y[i];
       return Math.sqrt(dx*dx + dy*dy);
-   }
-
-   // instance01 (n=10, 3 digits)
-   public static Pi instance01()
-   {
-      return new Pi(10,3);
-   }
-
-   // instance02 (n=25, 4 digits)
-   public static Pi instance02()
-   {
-      return new Pi(25,4);
-   }
-
-   // instance03 (n=50, 5 digits)
-   public static Pi instance03()
-   {
-      return new Pi(50,5);
    }
 
    // main

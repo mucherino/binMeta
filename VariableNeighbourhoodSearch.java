@@ -3,15 +3,17 @@
  *
  * binMeta project
  *
+ * History:
  * - initial version coded by William Zounon (M2 Miage 2020-21)
- * - the VNS variants have been coded by Simon B. Hengeveld (PhD candidate Matisse Doctoral School)
+ * - the VNS variants have been coded by Simon B. Hengeveld (PhD candidate Matisse Doctoral School 2021-24)
  *
  * In Hamming space, the distance between two solutions is at least 1. As a consequence, the neighbourhoods cannot
  * slighly grow as in continuous spaces. For this reason, we implement here, for all VNS variants, the Fleszar-Hindi
  * extention, where more than one random solution is selected in each neighbourhood. The maxAttempts parameter indicates
- * the number of solutions that are to be randomly extracted from each neighbourhood.
+ * the number of solutions that are to be randomly extracted from each neighbourhood. When possible, we rather perform
+ * an exhaustive search on the current neighbourhood.
  *
- * last update: October 8, 2022
+ * last update: April 16, 2023
  *
  * AM
  */
@@ -46,16 +48,7 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
          this.objValue = this.obj.value(this.solution);
          if (vnsType == null) throw new Exception("VariableNeighbourhoodSearch: the String supposed to contain the VNS type is null");
          if (vnsType.length() == 0) throw new Exception("VariableNeighbourhoodSearch: the String supposed to contain the VNS type is empty");
-         this.procedure = -1;
-         for (int i = 0; i < 6; i++)
-         {
-            if (vnsType.equalsIgnoreCase(variant[i]))
-            {
-               this.procedure = i;
-               break;
-            }
-         }
-         if (this.procedure == -1) throw new Exception("VariableNeighbourhoodSearch: '" + vnsType + "' is an unknown VNS type");
+         this.setType(vnsType);
          if (maxAttempts <= 0) throw new Exception("VariableNeighbourhoodSearch: specified max number of attempts (per neighborhood) is nonpositive");
          this.maxAttempts = maxAttempts;
          if (maxTime <= 0) throw new Exception("VariableNeighbourhoodSearch: the maximum execution time (in ms) is nonpositive");
@@ -74,9 +67,9 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
    }
 
    // VariableNeighbourhoodSearch constructor (for the basic implementation)
-   public VariableNeighbourhoodSearch(Data startPoint,Objective obj,int maxAttempts,long maxTime)
+   public VariableNeighbourhoodSearch(Data startPoint,Objective obj,long maxTime)
    {
-      this(startPoint,obj,"basic",maxAttempts,maxTime);
+      this(startPoint,obj,"basic",100,maxTime);
    }
 
    // VariableNeighbourhoodSearch constructor
@@ -118,6 +111,36 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
    public Data solutionSample()
    {
       return new Data(15,0.5);  // 3 bits for the VNS type + 12 bits for maxAttempts (values ranging from 1 to 2^12)
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return null;
+   }
+
+   // set VNS type
+   public void setType(String vnsType)
+   {
+      try
+      {
+         this.procedure = -1;
+         for (int i = 0; i < 6; i++)
+         {
+            if (vnsType.equalsIgnoreCase(variant[i]))
+            {
+               this.procedure = i;
+               break;
+            }
+         }
+         if (this.procedure == -1) throw new Exception("VariableNeighbourhoodSearch: '" + vnsType + "' is an unknown VNS type");
+      }
+      catch (Exception e)
+      {
+         e.printStackTrace();
+         System.exit(1);
+      }
    }
 
    // set the alpha coefficient (only for 'skewed' version)
@@ -406,7 +429,8 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
 
       // preliminary calculations
       int nbits = this.solution.numberOfBits();
-      LocalOpt local = new LocalOpt(this.solution,this.obj,this.maxTime);
+      long localTime = Math.max(100L,this.maxTime/10L);
+      LocalOpt local = new LocalOpt(this.solution,this.obj,localTime);
       local.optimize();
       this.updateSolution(local.getSolution());
       boolean[] exhaustive = this.neighbourhoodAnalysis();
@@ -442,7 +466,7 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
          // running local optimization on the best found solution
          if (!this.solution.equals(best))
          {
-            local = new LocalOpt(best,this.obj,this.maxTime);
+            local = new LocalOpt(best,this.obj,localTime);
             local.optimize();
             best = local.getSolution();
          }
@@ -493,7 +517,9 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
    // instance01 (SubsetSum, 2ms)
    public static VariableNeighbourhoodSearch instance01()
    {
-      Objective obj = SubsetSum.instance01();
+      Random R = new Random();
+      int n = 6 + R.nextInt(14);
+      Objective obj = new SubsetSum(n,2,n,R);
       return new VariableNeighbourhoodSearch(obj,2);
    }
 
@@ -510,111 +536,5 @@ public class VariableNeighbourhoodSearch extends binMeta implements Objective
       Objective obj = new Pi(20,4);
       return new VariableNeighbourhoodSearch(obj,9);
    }
-
-   // TESTS
-//   public static void main(String[] args)
-//   {
-//      Objective[] objs = new Objective[4];
-//      DDGP tmp = new DDGP("ddgp/1fs3.nmr");
-////      objs[0] = new Pi(50, 6);
-////      objs[0] = new DDGP(tmp,0,80);
-////      objs[1] = new DDGP(tmp,0,160);
-//      objs[0] = ColorPartition.instance03();
-//      objs[1] = new DDGP(tmp,0,80);
-//      objs[2] = new DDGP(tmp,0,160);
-//      objs[3] = new DDGP(tmp,0,350);
-//
-//      int tests = 1;
-//      int maxAtt = 100;
-//      int[] maxTimes = new int[]{2000, 2000, 20000, 20000};
-//      double[] averages;
-//      int i = 0;
-//      for (Objective obj : objs) {
-//         averages = new double[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//         for (int t = 0; t < tests; t++) {
-//            Data startingpoint = obj.solutionSample();
-//
-//            LocalOpt gradient = new LocalOpt(startingpoint, obj, maxTimes[i]);
-//            gradient.optimize();
-//            averages[0] += obj.value(gradient.solution);
-//
-//            RandomWalk rw = new RandomWalk(startingpoint, obj, maxTimes[i]);
-//            rw.optimize();
-//            averages[1] += obj.value(rw.solution);
-//
-//            MultiStart ms = new MultiStart(startingpoint, obj, 100, maxTimes[i]);
-//            ms.optimize();
-//            averages[2] += obj.value(ms.solution);
-//
-//            WolfSearch ws = new WolfSearch(obj,100,100,2,(int) Math.floor(0.7*startingpoint.numberOfBits()),0.1,0.4,maxTimes[i]);
-//            ws.optimize();
-//            averages[3] += obj.value(ws.solution);
-//
-//            VariableNeighbourhoodSearch vnsBasic = new VariableNeighbourhoodSearch(startingpoint, obj, maxAtt, maxTimes[i]);
-//            vnsBasic.optimize();
-//            averages[4] += obj.value(vnsBasic.solution);
-//
-//            VariableNeighbourhoodSearch vnsCyclic = new VariableNeighbourhoodSearch(startingpoint, obj, "cyclic", maxAtt, maxTimes[i]);
-//            vnsCyclic.optimize();
-//            averages[5] += obj.value(vnsCyclic.solution);
-//
-//            VariableNeighbourhoodSearch vnsPipe = new VariableNeighbourhoodSearch(startingpoint, obj, "pipe", maxAtt, maxTimes[i]);
-//            vnsPipe.optimize();
-//            averages[6] += obj.value(vnsPipe.solution);
-//
-//            VariableNeighbourhoodSearch vnsJumping = new VariableNeighbourhoodSearch(startingpoint, obj, "jumping", maxAtt, maxTimes[i]);
-//            vnsJumping.optimize();
-//            averages[7] += obj.value(vnsJumping.solution);
-//
-//            VariableNeighbourhoodSearch vnsSkewed = new VariableNeighbourhoodSearch(startingpoint, obj, "skewed", maxAtt, maxTimes[i]);
-//            vnsSkewed.optimize();
-//            averages[8] += obj.value(vnsSkewed.solution);
-//
-//            VariableNeighbourhoodSearch vnsNested = new VariableNeighbourhoodSearch(startingpoint, obj, "nested", maxAtt, maxTimes[i]);
-//            vnsNested.optimize();
-//            averages[9] += obj.value(vnsNested.solution);
-//
-////
-////
-////            if (obj instanceof DDGP) {
-////               VariableNeighbourhoodSearch vnsDDGP = new VariableNeighbourhoodSearch(startingpoint, obj, maxTimes[i], "ddgp", 1, 1, 0);
-////               vnsDDGP.optimize();
-////               averages[14] += vnsDDGP.objValue;
-////               ((DDGP) obj).resetContractions();
-//////
-//////               VariableNeighbourhoodSearch vnsDDGPJump = new VariableNeighbourhoodSearch(startingpoint, obj, maxTimes[i], "ddgp bestImprovement", 1, 2, 0);
-//////               vnsDDGPJump.optimize();
-//////               averages[15] += obj.value(vnsDDGPJump.solution);
-//////               ((DDGP) obj).resetContractions();
-//////
-//////               VariableNeighbourhoodSearch vnsDDGPSkew = new VariableNeighbourhoodSearch(startingpoint, obj, maxTimes[i], "ddgp", 1, 2, 0.0001);
-//////               vnsDDGPSkew.optimize();
-//////               averages[16] += obj.value(vnsDDGPSkew.solution);
-//////               ((DDGP) obj).resetContractions();
-////
-////               VariableNeighbourhoodSearch vnsDDGPFHJump = new VariableNeighbourhoodSearch(startingpoint, obj, maxTimes[i], "ddgp fh", 1, 2, 0.0001);
-////               vnsDDGPFHJump.optimize();
-////               averages[17] += vnsDDGPFHJump.objValue;
-////               ((DDGP) obj).resetContractions();
-////            }
-//            System.out.print(t);
-//         }
-//         System.out.print("\n");
-//
-//         i++;
-//         int j = 0;
-//
-//         System.out.println("Local opt: " + averages[j++] / tests);
-//         System.out.println("Random walk: " + averages[j++] / tests);
-//         System.out.println("multistart: " + averages[j++] / tests);
-//         System.out.println("Wolfsearch: " + averages[j++] / tests);
-//         System.out.println("Basic vns: " + averages[j++] / tests);
-//         System.out.println("Cyclic vns: " + averages[j++] / tests);
-//         System.out.println("Pipe vns: " + averages[j++] / tests);
-//         System.out.println("Jumping vns: " + averages[j++] / tests);
-//         System.out.println("Skewed vns: " + averages[j++] / tests);
-//         System.out.println("Nested vns: " + averages[j++] / tests);
-//      }
-//   }
 }
 

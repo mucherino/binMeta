@@ -5,7 +5,7 @@
  *
  * initial version coded by Fatma Hamdi (M2 Miage 2020-21)
  *
- * last update: August 5, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
@@ -46,6 +46,12 @@ public class MultiStart extends binMeta implements Objective
    }
 
    // MultiStart constructor
+   public MultiStart(Data startPoint,Objective obj,long maxTime)
+   {
+      this(startPoint,obj,100,maxTime);
+   }
+
+   // MultiStart constructor
    public MultiStart(Objective obj,long maxTime)
    {
       this.isObjective = true;
@@ -81,6 +87,13 @@ public class MultiStart extends binMeta implements Objective
       return new Data(10,0.5);  // 10 bits for the memory size (values ranging from 10 to 10 + 2^10)
    }
 
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return null;
+   }
+
    // optimize (by MultiStart)
    @Override
    public void optimize()
@@ -100,11 +113,12 @@ public class MultiStart extends binMeta implements Objective
       int h = 1;
       Data D = null;
       double value = 0.0;
+      long localTime = Math.max(100L,this.maxTime/10L);
       long startime = System.currentTimeMillis();
       Random R = new Random();
 
       // include initial solution in the Memory (after local optimization)
-      LocalOpt refine = new LocalOpt(this.solution,this.obj,this.maxTime);
+      LocalOpt refine = new LocalOpt(this.solution,this.obj,localTime);
       refine.optimize();
       D = refine.getSolution();
       value = this.obj.value(D);
@@ -119,7 +133,7 @@ public class MultiStart extends binMeta implements Objective
 
          // looking for a neighbour and applying local optimization
          Data newD = D.randomSelectInNeighbourhood(h,h);
-         refine = new LocalOpt(newD,this.obj,this.maxTime);
+         refine = new LocalOpt(newD,this.obj,localTime);
          refine.optimize();
          newD = refine.getSolution();
          value = this.obj.value(newD);
@@ -135,7 +149,7 @@ public class MultiStart extends binMeta implements Objective
          // if newD was actually not "new" for the memory
          Data[] Datarray = M.toDataArray();
          newD = Data.randomSelectAtDistanceFrom(h,Datarray);
-         refine = new LocalOpt(newD,this.obj,this.maxTime);
+         refine = new LocalOpt(newD,this.obj,localTime);
          refine.optimize();
          newD = refine.getSolution();
 
@@ -195,7 +209,9 @@ public class MultiStart extends binMeta implements Objective
    // instance01 (SubsetSum, 2ms)
    public static MultiStart instance01()
    {
-      Objective obj = SubsetSum.instance01();
+      Random R = new Random();
+      int n = 6 + R.nextInt(14);
+      Objective obj = new SubsetSum(n,2,n,R);
       return new MultiStart(obj,2);
    }
 

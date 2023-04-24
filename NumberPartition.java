@@ -3,18 +3,19 @@
  *
  * binMeta project
  *
- * initial version coded by Issa Sanago (M1 Miage 2020-21)
+ * History:
+ * - initial version coded by Issa Sanago (M1 Miage 2020-21)
+ * - constructors rewritten (automatic generation)
  *
- * last update: April 26, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -39,38 +40,56 @@ public class NumberPartition implements Objective
       }
    }
 
-   // constructor (from Set)
-   public NumberPartition(Set<Integer> setOfIntegers)
+   // constructor (randomy generated instance)
+   public NumberPartition(int n,int lb,int ub,Random R)
    {
       try
       {
-         if (setOfIntegers == null) throw new Exception("NumberPartition: Set object is null");
-         if (setOfIntegers.size() == 0) throw new Exception("NumberPartition: Set object is empty");
-         this.listOfIntegers = new ArrayList<Integer> (setOfIntegers);
+         if (n <= 0) throw new Exception("NumberPartition: cannot create instance with a nonpositive number of elements");
+         if (n <= 9) throw new Exception("NumberPartition: cannot create instance with such a small number of elements");
+         if (lb <= 0) throw new Exception("NumberPartition: the given lower bound for the integers is nonpositive");
+         if (ub <= 0) throw new Exception("NumberPartition: the given upper bound for the integers is nonpositive");
+         if (lb > ub) throw new Exception("NumberPartition: the given lower bound for the integers is strictly larger than the upper bounds");
+         if (lb + 1 >= ub) throw new Exception("NumberPartition: the given bounds are too strict");
       }
       catch (Exception e)
       {
          e.printStackTrace();
          System.exit(1);
       }
-   }
+      if (R == null)  R = new Random();
 
-   // constructor (from array)
-   public NumberPartition(int[] integers)
-   {
-      try
+      // computing the integers in the two expected partitions (at the same time)
+      int sum1 = 0;
+      int sum2 = 0;
+      ArrayList<Integer> l1 = new ArrayList<Integer> ();
+      ArrayList<Integer> l2 = new ArrayList<Integer> ();
+      while (l1.size() + l2.size() < n - 1)
       {
-         if (integers == null) throw new Exception("NumberPartition: array of integers is null");
-         int n = integers.length;
-         if (n == 0) throw new Exception("NumberPartition: array of integers contains no elements");
-         this.listOfIntegers = new ArrayList<Integer> (n);
-         for (int i = 0; i < n; i++)  this.listOfIntegers.add(integers[i]);
+         int number = lb + R.nextInt(ub - lb);
+         if (sum1 <= sum2)
+         {
+            l1.add(number);
+            sum1 = sum1 + number;
+         }
+         else
+         {
+            l2.add(number);
+            sum2 = sum2 + number;
+         }
       }
-      catch (Exception e)
+
+      // the last element allows us to make the two sums match
+      if (sum1 != sum2)
       {
-         e.printStackTrace();
-         System.exit(1);
+         int last = Math.abs(sum1 - sum2);
+         if (sum1 < sum2)  l1.add(last);  else  l2.add(last);
       }
+
+      // joining and mixing the two partitions
+      this.listOfIntegers = l1;
+      this.listOfIntegers.addAll(l2);
+      Collections.shuffle(this.listOfIntegers);
    }
 
    // getName
@@ -91,6 +110,13 @@ public class NumberPartition implements Objective
    public Data solutionSample()
    {
       return new Data(this.listOfIntegers.size(),0.5);
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return (Double) 0.0;
    }
 
    // value
@@ -129,61 +155,29 @@ public class NumberPartition implements Objective
       return "[" + this.getName() + ": " + this.listOfIntegers.size() + " integers]";
    }
 
-   /* static methods defining some problem instances (from https://people.sc.fsu.edu/~jburkardt/datasets/datasets.html) */
-
-   // instance01 (corresponds to p01 in the dataset)
-   public static NumberPartition instance01()
-   {
-      int [] ints = {2,10,3,8,5,7,9,5,3,2};
-      return new NumberPartition(ints);
-   }
-
-   // instance02 (combines p02 and p03 of the dataset)
-   public static NumberPartition instance02()
-   {
-      int [] ints = {771,121,281,854,885,734,486,1003,83,62,484,114,205,288,506,503,201,127,410};
-      return new NumberPartition(ints);
-   }
-
-   // instance03 (combines p04 and p05 of the dataset)
-   public static NumberPartition instance03()
-   {
-      int [] ints = {19,17,13,9,6,3,4,3,1,3,2,3,2,1};
-      return new NumberPartition(ints);
-   }
-
    // main
    public static void main(String[] args)
    {
-      System.out.println("Objective NumberPartition");
+      System.out.println("Objective NumberPartition\n");
       Random R = new Random();
-      NumberPartition obj = null;
-      String constrName = null;
-      int constructor = R.nextInt(3);
-      if (constructor == 0)
-      {
-         constrName = "NumberPartition(List<Integer>)";
-         ArrayList<Integer> loi = new ArrayList<Integer> (4);
-         loi.add(3);  loi.add(4);  loi.add(4);  loi.add(3);
-         obj = new NumberPartition(loi);
-      }
-      else if (constructor == 1)
-      {
-         constrName = "NumberPartition(Set<Integer>)";
-         TreeSet<Integer> soi = new TreeSet<Integer> ();
-         soi.add(5);  soi.add(7);  soi.add(2);
-         obj = new NumberPartition(soi);
-      }
-      else
-      {
-         constrName = "NumberPartition(int[])";
-         int [] array = {5,4,6,3,3,9};
-         obj = new NumberPartition(array);
-      }
-      System.out.println("using constructor " + constrName);
+
+      // predefined instance (instance p1 from from https://people.sc.fsu.edu/~jburkardt/datasets/datasets.html)
+      List<Integer> listOfIntegers = Arrays.asList(new Integer[] {2,10,3,8,5,7,9,5,3,2});
+      System.out.println("Constructor from List");
+      NumberPartition obj = new NumberPartition(listOfIntegers);
       System.out.println(obj);
       System.out.println("integer values : " + obj.getIntegerArrayListCopy());
       Data D = obj.solutionSample();
+      System.out.println("sample solution : " + D);
+      System.out.println("objective function value in sample solution : " + obj.value(D));
+      System.out.println();
+
+      // random instance
+      System.out.println("Constructor for random instances");
+      int n = 10 + R.nextInt(90);
+      obj = new NumberPartition(n,1,n,R);
+      if (n < 10)  System.out.println("integer values : " + obj.getIntegerArrayListCopy());
+      D = obj.solutionSample();
       System.out.println("sample solution : " + D);
       System.out.println("objective function value in sample solution : " + obj.value(D));
    }

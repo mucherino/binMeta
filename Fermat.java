@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 29, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
@@ -35,6 +35,12 @@ public class Fermat implements Objective
       }
    }
 
+   // Constructor: the exponent is here fixed to 2.
+   public Fermat(int ndigits)
+   {
+      this(2,ndigits);
+   }
+
    // getName
    @Override
    public String getName()
@@ -47,6 +53,13 @@ public class Fermat implements Objective
    public Data solutionSample()
    {
       return new Data(3*this.ndigits,0.5);
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return null;
    }
 
    // value
@@ -129,24 +142,6 @@ public class Fermat implements Objective
    public String toString()
    {
       return "[" + this.getName() + ": exponent is " + this.exp + "; " + this.ndigits + " digits per integer]";
-   }
-
-   // instance01 (exp=2, 10 digits)
-   public static Fermat instance01()
-   {
-      return new Fermat(2,10);
-   }
-
-   // instance02 (exp=3, 12 digits)
-   public static Fermat instance02()
-   {
-      return new Fermat(3,12);
-   }
-
-   // instance03 (exp=3, 15 digits)
-   public static Fermat instance03()
-   {
-      return new Fermat(3,15);
    }
 
    // main

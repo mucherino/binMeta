@@ -3,7 +3,7 @@
  *
  * binMeta project
  *
- * last update: May 4, 2021
+ * last update: April 16, 2023
  *
  * AM
  */
@@ -38,6 +38,12 @@ public class ColorPartition implements Objective
       }
    }
 
+   // Constructor
+   public ColorPartition(int n)
+   {
+      this((int) Math.sqrt(n),(int) Math.sqrt(n));
+   }
+
    // getName
    @Override
    public String getName()
@@ -50,6 +56,15 @@ public class ColorPartition implements Objective
    public Data solutionSample()
    {
       return new Data(this.n*this.m,0.5);
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      Double smaller = Double.valueOf(n);
+      if (m < n)  smaller = Double.valueOf(m);
+      return smaller;
    }
 
    // value
@@ -132,24 +147,6 @@ public class ColorPartition implements Objective
       print = print + "> value: " + this.value + "\n";
 
       return print;
-   }
-
-   // instance01 (10x6 matrix)
-   public static ColorPartition instance01()
-   {
-      return new ColorPartition(10,6);
-   }
-
-   // instance02 (20x10 matrix)
-   public static ColorPartition instance02()
-   {
-      return new ColorPartition(20,10);
-   }
-
-   // instance03 (50x20 matrix)
-   public static ColorPartition instance03()
-   {
-      return new ColorPartition(50,20);
    }
 
    // main

@@ -3,7 +3,7 @@
 
 all: Data.jar Objectives.jar Memory.class MetaHeuristics.jar MetaTest.class
 
-objs=Objective.class BitCounter.class ColorPartition.class Pi.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class
+objs=Objective.class BitCounter.class ColorPartition.class Pi.class Fermat.class SubsetSum.class NumberPartition.class Knapsack.class SetCover.class
 
 methods=binMeta.class LocalOpt.class RandomWalk.class WolfSearch.class VariableNeighbourhoodSearch.class MultiStart.class
 
@@ -21,7 +21,6 @@ ColorPartition.class: ColorPartition.java Objective.class Data.jar
 Data.jar: Data.java
 	javac -cp . Data.java
 	jar cvf Data.jar Data*.class > /dev/null
-	\rm Data*.class
 
 Fermat.class: Fermat.java Objective.class Data.jar
 	javac -cp .:Data.jar Fermat.java
@@ -58,6 +57,9 @@ Pi.class: Pi.java Objective.class Data.jar
 
 RandomWalk.class: RandomWalk.java Data.jar Objectives.jar binMeta.class
 	javac -cp .:Data.jar:Objectives.jar RandomWalk.java
+
+SetCover.class: SetCover.java Objective.class Data.jar
+	javac -cp .:Data.jar SetCover.java
 
 SubsetSum.class: SubsetSum.java Objective.class Data.jar
 	javac -cp .:Data.jar SubsetSum.java 

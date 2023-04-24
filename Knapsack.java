@@ -3,10 +3,11 @@
  *
  * binMeta project
  *
- * initial version coded by Alban Gutierrez Andre (M1 Info 2020-21) 
- *                      and Safietou Diallo (M1 Miage 2020-21)
+ * History:
+ * - initial version coded by Alban Gutierrez Andre (M1 Info 2020-21) and Safietou Diallo (M1 Miage 2020-21)
+ * - constructors rewritten (automatic generation)
  *
- * last update: May 29, 2021
+ * last update: April 21, 2023
  *
  * AM
  */
@@ -14,8 +15,6 @@
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -25,6 +24,7 @@ public class Knapsack implements Objective
    private ArrayList<Double> listOfValues;
    private ArrayList<Double> listOfWeights;
    private double maxWeight;
+   private Double ub;
 
    // constructor (from two lists, one with the values, the other with the weights)
    public Knapsack(List<Double> listOfValues,List<Double> listOfWeights,double maxWeight)
@@ -50,31 +50,56 @@ public class Knapsack implements Objective
       }
    }
 
-   // constructor (from two arrays, one with the values, the other with the weights)
-   public Knapsack(double[] listOfValues,double[] listOfWeights,double maxWeight)
+   // constructor (randomy generated instance)
+   public Knapsack(int n,int lb,int ub,double c,Random R)
    {
       try
       {
-         if (listOfValues == null) throw new Exception("Knapsack: specified array of values is null");
-         int n = listOfValues.length;
-         if (n == 0) throw new Exception("Knapsack: specified array of values is empty");
-         if (listOfWeights == null) throw new Exception("Knapsack: specified array of weights is null");
-         if (listOfWeights.length == 0) throw new Exception("Knapsack: specified array of weights is empty");
-         if (n != listOfWeights.length) throw new Exception("Knapsack: specified arrays differ in length");
-         this.listOfValues = new ArrayList<Double> (n);
-         for (int i = 0; i < n; i++)  this.listOfValues.add(listOfValues[i]);
-         if (Collections.min(this.listOfValues) <= 0.0) throw new Exception("Knapsack: specified array of values contains nonpositive elements");
-         this.listOfWeights = new ArrayList<Double> (n);
-         for (int i = 0; i < n; i++)  this.listOfWeights.add(listOfWeights[i]);
-         if (Collections.min(this.listOfWeights) <= 0.0) throw new Exception("Knapsack: specified array of weights contains nonpositive elements");
-         if (maxWeight <= 0.0) throw new Exception("Knapsack: specified maximum weight must be strictly positive");
-         this.maxWeight = maxWeight;
+         if (n <= 0) throw new Exception("Knapsack: cannot create instance with a nonpositive number of elements");
+         if (n <= 9) throw new Exception("Knapsack: cannot create instance with such a small number of elements");
+         if (lb <= 0) throw new Exception("Knapsack: the given lower bound for values and weights is nonpositive");
+         if (ub <= 0) throw new Exception("Knapsack: the given upper bound for values and weights is nonpositive");
+         if (lb > ub) throw new Exception("Knapsack: the given lower bound for values and weights is strictly larger than the upper bounds");
+         if (c < 0.0) throw new Exception("Knapsack: the given percentage for the capacity is negative");
+         if (c > 1.0) throw new Exception("SetCover: the given percentage for the capacity is larger than 1.0");
       }
       catch (Exception e)
       {
          e.printStackTrace();
          System.exit(1);
       }
+      if (R == null)  R = new Random();
+
+      // preparing the lists
+      this.listOfValues = new ArrayList<Double>(n);
+      this.listOfWeights = new ArrayList<Double> (n);
+
+      // generating all (value,weight) pairs
+      this.ub = 0.0;
+      this.maxWeight = 0.0;
+      double range = ub - lb;
+      for (int i = 0; i < n; i++)
+      {
+         double rnd = 0.05 + 0.9*R.nextDouble();
+         double lB = range*(rnd - 0.05);
+         double uB = range*(rnd + 0.05);
+         double newWeight = lb + lB + (uB - lB)*R.nextDouble();
+         double newValue = lb + lB + (uB - lB)*R.nextDouble();
+         this.listOfWeights.add(newWeight);
+         this.listOfValues.add(newValue);
+         if (R.nextDouble() < c)
+         {
+            this.ub = this.ub + newValue;
+            this.maxWeight = this.maxWeight + newWeight;
+         }
+      }
+      this.ub = -this.ub;
+   }
+
+   // constructor (randomy generated instance, also p is random here, but R cannot be null)
+   public Knapsack(int n,int lb,int ub,Random R)
+   {
+      this(n,lb,ub,0.5*R.nextDouble(),R);
    }
 
    // getName
@@ -107,6 +132,13 @@ public class Knapsack implements Objective
    public Data solutionSample()
    {
       return new Data(this.listOfValues.size(),0.5);
+   }
+
+   // upperBound
+   @Override
+   public Double upperBound()
+   {
+      return this.ub;
    }
 
    // value (new implementation of the method proposed by Charly Colombu, M2 Miage 2020-21)
@@ -156,69 +188,38 @@ public class Knapsack implements Objective
       return "[" + this.getName() + ": " + this.listOfValues.size() + " items, max weight is " + this.maxWeight +  "]";
    }
 
-   /* static methods defining some problem instances (from https://people.sc.fsu.edu/~jburkardt/datasets/datasets.html) */
-
-   // instance01 (corresponds to p01 in the dataset)
-   public static Knapsack instance01()
-   {
-      double [] weights = {23,31,29,44,53,38,63,85,89,82};
-      double [] values = {92,57,49,68,60,43,67,84,87,72};
-      return new Knapsack(values,weights,165.0);
-   }
-
-   // instance02 (combines p02, p03, p04, p05 of the dataset)
-   public static Knapsack instance02()
-   {
-      double [] weights = {12,7,11,8,9,56,59,80,64,75,17,31,10,20,19,4,3,6,25,35,45,5,25,3,2,2};
-      double [] values = {24,13,23,15,16,50,50,64,46,50,5,70,20,39,37,7,5,10,350,400,450,20,70,8,5,5};
-      return new Knapsack(values,weights,370.0);
-   }
-
-   // instance03 (combines p06 and p07 of the dataset)
-   public static Knapsack instance03()
-   {
-      double [] weights = {41,50,49,59,55,57,60,70,73,77,80,82,87,90,94,98,106,110,113,115,118,120};
-      double [] values = {442,525,511,593,546,564,617,135,139,149,150,156,163,173,184,192,201,210,214,221,229,240};
-      return new Knapsack(values,weights,1627.0);
-   }
-
    // main
    public static void main(String[] args)
    {
       System.out.println("Objective Knapsack");
       Random R = new Random();
-      Knapsack obj = null;
-      String constrName = null;
-      int constructor = R.nextInt(2);
-      if (constructor == 0)
-      {
-         constrName = "Knapsack(List<Double>,List<Double>,double)";
-         ArrayList<Double> values = new ArrayList<Double> (10);
-         ArrayList<Double> weights = new ArrayList<Double> (10);
-         values.add(5.0);  weights.add(7.0);  // solution 27 with indices 0, 1, 2, 7, 8 (weight is 15)
-         values.add(4.0);  weights.add(2.0);  // solution 27 with indices 1, 2, 6, 7, 8, 9 (weight is 13)
-         values.add(7.0);  weights.add(1.0);
-         values.add(2.0);  weights.add(9.0);
-         values.add(1.0);  weights.add(5.0);
-         values.add(8.0);  weights.add(10.0);
-         values.add(3.0);  weights.add(2.0);
-         values.add(5.0);  weights.add(1.0);
-         values.add(6.0);  weights.add(4.0);
-         values.add(2.0);  weights.add(3.0);
-         obj = new Knapsack(values,weights,15);
-      }
-      else
-      {
-         constrName = "Knapsack(double[],double[],double)";
-         double [] values = new double [] {1,4,5,8,1,3,9,7,12,8};
-         double [] weights = new double [] {7,8,2,6,3,12,11,9,4,6};
-         obj = new Knapsack(values,weights,27);  // solution 37 with indices 1, 2, 3, 8, 9
-      }
-      System.out.println("using constructor " + constrName);
+
+      // random instance
+      int n = 10 + R.nextInt(90);
+      Knapsack obj = new Knapsack(n,1,n+1,R);
+      System.out.println(obj);
+      Data D = obj.solutionSample();
+      System.out.println("sample solution : " + D);
+      System.out.println("objective function value in sample solution : " + obj.value(D));
+
+      // other constructor
+      ArrayList<Double> values = new ArrayList<Double> (10);
+      ArrayList<Double> weights = new ArrayList<Double> (10);
+      values.add(5.0);  weights.add(7.0);  // solution 27 with indices 0, 1, 2, 7, 8 (weight is 15)
+      values.add(4.0);  weights.add(2.0);  // solution 27 with indices 1, 2, 6, 7, 8, 9 (weight is 13)
+      values.add(7.0);  weights.add(1.0);
+      values.add(2.0);  weights.add(9.0);
+      values.add(1.0);  weights.add(5.0);
+      values.add(8.0);  weights.add(10.0);
+      values.add(3.0);  weights.add(2.0);
+      values.add(5.0);  weights.add(1.0);
+      values.add(6.0);  weights.add(4.0);
+      values.add(2.0);  weights.add(3.0);
+      obj = new Knapsack(values,weights,15);
       System.out.println(obj);
       System.out.println("values of the elements : " + obj.getArrayListValues());
       System.out.println("weights of the elements : " + obj.getArrayListWeights());
-      Data D = obj.solutionSample();
+      D = obj.solutionSample();
       System.out.println("sample solution : " + D);
       System.out.println("objective function value in sample solution : " + obj.value(D));
    }
